@@ -17,6 +17,7 @@ import {
   BarChart2,
   Cloud,
   Wifi,
+  // Sheet,  <-- ESTO ERA EL ERROR (Lo he comentado/quitado)
   Printer,
   RefreshCw 
 } from 'lucide-react';
@@ -379,7 +380,7 @@ export default function App() {
               <div className="flex gap-2">
                 <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors whitespace-nowrap h-10 shadow-sm"><Printer size={16} /> Imprimir / PDF</button>
                 <button onClick={exportToCSV} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors whitespace-nowrap h-10 shadow-sm"><Download size={16} /> CSV</button>
-                <a href={GOOGLE_SHEETS_WEBHOOK_URL.replace('/exec', '/edit')} target="_blank" rel="noreferrer" className="bg-green-100 hover:bg-green-200 text-green-800 px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors whitespace-nowrap h-10 shadow-sm"><Sheet size={16} /> Ver Sheet</a>
+                <a href={GOOGLE_SHEETS_WEBHOOK_URL.replace('/exec', '/edit')} target="_blank" rel="noreferrer" className="bg-green-100 hover:bg-green-200 text-green-800 px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors whitespace-nowrap h-10 shadow-sm"><FileText size={16} /> Ver Sheet</a>
               </div>
             </div>
 
