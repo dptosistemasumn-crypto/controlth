@@ -1,10 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import App from './App.jsx'
+import './index.css' // (Si te da error esta línea, bórrala, pero intenta dejarla primero)
 
-// Nota: No importamos App ni estilos para esta prueba
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <div style={{ padding: 50, fontFamily: 'sans-serif' }}>
-    <h1>✅ ¡Funciona!</h1>
-    <p>La configuración es correcta. El problema está en App.jsx</p>
-  </div>
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>,
 )
