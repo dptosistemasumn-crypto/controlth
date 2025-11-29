@@ -17,7 +17,6 @@ import {
   BarChart2,
   Cloud,
   Wifi,
-  Sheet, 
   Printer,
   RefreshCw 
 } from 'lucide-react';
