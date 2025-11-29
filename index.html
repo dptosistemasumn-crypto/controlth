@@ -1,1 +1,18 @@
+<script type="module" src="/src/main.jsx"></script>
 
+Si tu archivo se llama `Main.jsx` (con mayúscula) o `main.js` (sin la x), **cámbialo para que coincidan exactamente**.
+
+---
+
+### 🕵️‍♂️ Cómo saber qué error es exactamente (Modo Detective)
+
+Si todo lo anterior parece estar bien, haz esto en la pantalla en blanco de tu App:
+
+1.  Dale **Clic Derecho** en cualquier parte blanca de la página.
+2.  Selecciona **"Inspeccionar"** (Inspect).
+3.  Ve a la pestaña que dice **"Console"** (Consola).
+4.  Ahí verás un texto en rojo.
+    * Si dice `Failed to resolve import "recharts"`, es la **Causa 1** (falta package.json).
+    * Si dice `404 Not Found ... main.jsx`, es la **Causa 2 o 3** (archivo mal ubicado o mal nombrado).
+
+**¿Qué te dice la consola o cuál crees que sea el caso?**
