@@ -4,20 +4,20 @@ import {
   Droplets, 
   Save, 
   History, 
-  Activity, 
+  // Activity,   <-- No se usaban, los limpié para evitar advertencias
   AlertTriangle, 
   CheckCircle, 
   Download, 
-  Trash2,
+  // Trash2,
   Building2,
   User,
   Calendar,
   Clock,
-  FileText,
-  BarChart2,
+  FileText,     // Usaremos este en lugar de Sheet
+  // BarChart2,
   Cloud,
-  Wifi,
-  // Sheet,  <-- ESTO ERA EL ERROR (Lo he comentado/quitado)
+  // Wifi,
+  // Sheet,      <-- ESTE ERA EL ERROR (ELIMINADO)
   Printer,
   RefreshCw 
 } from 'lucide-react';
@@ -34,17 +34,14 @@ import {
 } from 'recharts';
 
 // --- CONFIGURACIÓN ---
-// ✅ TU SCRIPT DE GOOGLE SHEETS
 const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwfBN6Ez6GdfXJf05pL5m8sUmkRp8kuqCdtHgS6hPp_C-YyR6C557CcHMsWVrNej_eU/exec"; 
 
-// Constantes de Identidad
 const COMPANY_NAME = "UNIÓN MEDICA DEL NORTE";
 const COMPANY_SLOGAN = "Salud al Alcance de Todos";
 const APP_TITLE = "Control de Temperatura y Humedad";
 const PRIMARY_COLOR = "#158F97"; 
 const COMPANY_LOGO_URL = "https://i.postimg.cc/L8QN7rqJ/LOGO-CJ-removebg-preview.png";
 
-// Constantes de Negocio
 const AREAS = ["OPTICA", "FARMACIA", "PROCEDIMIENTOS", "TOMA MUESTRA", "ODONTOLOGIA", "LABORATORIO"];
 const JORNADAS = ["Mañana", "Tarde"];
 const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
@@ -111,13 +108,6 @@ export default function App() {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const validateTemperature = (val) => {
-    if (!val) return null;
-    const num = parseFloat(val);
-    if (num < 15 || num > 30) return 'text-red-600 font-bold';
-    return 'text-green-600';
   };
 
   const isOutOfRange = (val) => {
@@ -239,19 +229,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-      <style>{`
-        @media print {
-          @page { margin: 1cm; size: landscape; }
-          .print\\:hidden { display: none !important; }
-          .print\\:block { display: block !important; }
-          .print\\:text-black { color: black !important; }
-          .print\\:shadow-none { box-shadow: none !important; }
-          .print\\:border-none { border: none !important; }
-          body { background: white !important; }
-          .recharts-responsive-container { height: 300px !important; }
-        }
-      `}</style>
-
       {/* HEADER */}
       <header className="bg-white shadow-md sticky top-0 z-50 print:hidden border-b border-slate-100">
         <div className="container mx-auto px-4 py-2 flex flex-col md:flex-row justify-between items-center">
@@ -392,7 +369,7 @@ export default function App() {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-8">
-                  {/* Gráficas igual que antes */}
+                  {/* Gráficas */}
                   <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
                     <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-black"><Thermometer className="text-blue-500 print:text-black" /> Temperatura (°C)</h3></div>
                     <div className="h-64 w-full">
