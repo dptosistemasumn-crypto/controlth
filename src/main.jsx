@@ -1,8 +1,8 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
-import './index.css' // Opcional: solo si tienes un archivo index.css
 
+// Buscamos el div con id "root" que pusimos en el HTML y mostramos la App
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
