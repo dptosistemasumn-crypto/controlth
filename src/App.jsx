@@ -4,20 +4,15 @@ import {
   Droplets, 
   Save, 
   History, 
-  // Activity,   <-- No se usaban, los limpié para evitar advertencias
   AlertTriangle, 
   CheckCircle, 
   Download, 
-  // Trash2,
   Building2,
   User,
   Calendar,
   Clock,
-  FileText,     // Usaremos este en lugar de Sheet
-  // BarChart2,
+  FileText,
   Cloud,
-  // Wifi,
-  // Sheet,      <-- ESTE ERA EL ERROR (ELIMINADO)
   Printer,
   RefreshCw 
 } from 'lucide-react';
@@ -30,7 +25,7 @@ import {
   Tooltip, 
   Legend, 
   ResponsiveContainer,
-  ReferenceArea
+  ReferenceLine // ✅ Importamos ReferenceLine para las líneas amarillas
 } from 'recharts';
 
 // --- CONFIGURACIÓN ---
@@ -369,23 +364,59 @@ export default function App() {
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-8">
-                  {/* Gráficas */}
+                  
+                  {/* Gráfica de Temperatura */}
                   <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
                     <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-black"><Thermometer className="text-blue-500 print:text-black" /> Temperatura (°C)</h3></div>
                     <div className="h-64 w-full">
                       {chartData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%"><LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" opacity={0.3} /><XAxis dataKey="name" tick={{fontSize: 10}} interval={0} angle={-45} textAnchor="end" height={50}/><YAxis domain={[10, 35]} /><Tooltip /><Legend /><ReferenceArea y1={15} y2={30} fill="green" fillOpacity={0.1} label="Zona Segura" /><Line type="monotone" dataKey="tempMin" stroke="#3b82f6" name="Min" strokeDasharray="3 3" dot={false} /><Line type="monotone" dataKey="tempActual" stroke="#10b981" name="Actual" strokeWidth={3} /><Line type="monotone" dataKey="tempMax" stroke="#ef4444" name="Max" strokeDasharray="3 3" dot={false} /></LineChart></ResponsiveContainer>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                            <XAxis dataKey="name" tick={{fontSize: 10}} interval={0} angle={-45} textAnchor="end" height={50}/>
+                            <YAxis domain={[10, 35]} />
+                            <Tooltip />
+                            <Legend />
+                            {/* LÍNEAS DE RANGO (Amarillas) */}
+                            <ReferenceLine y={15} stroke="gold" strokeDasharray="5 5" label={{ value: "Min (15)", fill: "orange", fontSize: 10 }} />
+                            <ReferenceLine y={30} stroke="gold" strokeDasharray="5 5" label={{ value: "Max (30)", fill: "orange", fontSize: 10 }} />
+                            
+                            {/* LÍNEAS DE DATOS (Colores solicitados) */}
+                            <Line type="monotone" dataKey="tempMin" stroke="blue" name="Min Reg." dot={false} strokeWidth={2} />
+                            <Line type="monotone" dataKey="tempActual" stroke="black" name="Actual" strokeWidth={3} />
+                            <Line type="monotone" dataKey="tempMax" stroke="red" name="Max Reg." dot={false} strokeWidth={2} />
+                          </LineChart>
+                        </ResponsiveContainer>
                       ) : <div className="h-full flex items-center justify-center text-slate-400">Sin datos</div>}
                     </div>
                   </div>
+
+                  {/* Gráfica de Humedad */}
                   <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
                     <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-black"><Droplets className="text-purple-500 print:text-black" /> Humedad (%)</h3></div>
                     <div className="h-64 w-full">
                       {chartData.some(d => d.humActual) ? (
-                        <ResponsiveContainer width="100%" height="100%"><LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" opacity={0.3} /><XAxis dataKey="name" tick={{fontSize: 10}} interval={0} angle={-45} textAnchor="end" height={50}/><YAxis domain={[0, 100]} /><Tooltip /><Legend /><ReferenceArea y1={35} y2={70} fill="purple" fillOpacity={0.1} label="Zona Segura" /><Line type="monotone" dataKey="humMin" stroke="#d8b4fe" name="Min" strokeDasharray="3 3" dot={false} /><Line type="monotone" dataKey="humActual" stroke="#8b5cf6" name="Actual" strokeWidth={3} /><Line type="monotone" dataKey="humMax" stroke="#581c87" name="Max" strokeDasharray="3 3" dot={false} /></LineChart></ResponsiveContainer>
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                            <XAxis dataKey="name" tick={{fontSize: 10}} interval={0} angle={-45} textAnchor="end" height={50}/>
+                            <YAxis domain={[0, 100]} />
+                            <Tooltip />
+                            <Legend />
+                            {/* LÍNEAS DE RANGO (Amarillas) */}
+                            <ReferenceLine y={35} stroke="gold" strokeDasharray="5 5" label={{ value: "Min (35)", fill: "orange", fontSize: 10 }} />
+                            <ReferenceLine y={70} stroke="gold" strokeDasharray="5 5" label={{ value: "Max (70)", fill: "orange", fontSize: 10 }} />
+                            
+                            {/* LÍNEAS DE DATOS (Colores solicitados) */}
+                            <Line type="monotone" dataKey="humMin" stroke="blue" name="Min Reg." dot={false} strokeWidth={2} />
+                            <Line type="monotone" dataKey="humActual" stroke="black" name="Actual" strokeWidth={3} />
+                            <Line type="monotone" dataKey="humMax" stroke="red" name="Max Reg." dot={false} strokeWidth={2} />
+                          </LineChart>
+                        </ResponsiveContainer>
                       ) : <div className="h-full flex items-center justify-center text-slate-400">Sin datos</div>}
                     </div>
                   </div>
+
                 </div>
                 {/* Estadísticas */}
                 <div className="space-y-4">
