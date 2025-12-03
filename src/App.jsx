@@ -83,23 +83,20 @@ export default function App() {
       
       if (Array.isArray(data)) {
         const processed = data.map((item, index) => {
-          // 1. Normalizar claves: Convertimos a minúsculas y QUITAMOS ESPACIOS
           const normalizedItem = {};
           Object.keys(item).forEach(key => {
             normalizedItem[key.trim().toLowerCase()] = item[key];
           });
 
-          // 2. Detectar Tipo con seguridad
           const rawType = normalizedItem['tipo'] || normalizedItem['type'] || 'temperatura';
           const type = rawType.toString().toLowerCase();
           
-          // 3. Leer Valores (Buscamos todas las variantes posibles de 'Mínima')
           const valActual = parseNum(normalizedItem['actual']);
           const valMin = parseNum(
             normalizedItem['mínima'] || 
             normalizedItem['minima'] || 
             normalizedItem['min'] ||
-            normalizedItem['mÃnima'] // Por si acaso la codificación falló
+            normalizedItem['mÃnima']
           );
           const valMax = parseNum(
             normalizedItem['máxima'] || 
@@ -118,7 +115,6 @@ export default function App() {
             observaciones: normalizedItem['observaciones'],
             type: type,
             
-            // Asignación estricta
             tempActual: type.includes('temp') ? valActual : null,
             tempMin: type.includes('temp') ? valMin : null,
             tempMax: type.includes('temp') ? valMax : null,
@@ -285,7 +281,8 @@ export default function App() {
         if (r.humMax !== null) grouped[key].humMax = r.humMax;
       }
     });
-    return Object.values(grouped);
+    
+    return Object.values(grouped).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
   };
 
   const chartData = getChartData();
@@ -301,7 +298,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-      {/* HEADER */}
+      {/* HEADER WEB (SOLO PANTALLA) */}
       <header className="bg-white shadow-md sticky top-0 z-50 print:hidden border-b border-slate-100">
         <div className="container mx-auto px-4 py-2 flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center gap-4 mb-2 md:mb-0 w-full md:w-auto justify-center md:justify-start">
@@ -329,22 +326,44 @@ export default function App() {
         </div>
       </header>
 
-      {/* HEADER IMPRESIÓN */}
-      <div className="hidden print:block mb-6 border-b-2 border-slate-800 pb-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-             <img src={COMPANY_LOGO_URL} alt="Logo" className="h-20 w-auto object-contain" />
+      {/* --- HEADER IMPRESIÓN (DISEÑO IMPACTANTE) --- */}
+      <div className="hidden print:block w-full mb-8">
+        {/* Cabecera Principal */}
+        <div className="flex justify-between items-start border-b-4 border-slate-800 pb-6 mb-6">
+          <div className="flex items-center gap-6">
+             <img src={COMPANY_LOGO_URL} alt="Logo" className="h-24 w-auto object-contain" />
              <div>
-               <h1 className="text-2xl font-extrabold text-black uppercase">{COMPANY_NAME}</h1>
-               <p className="text-black font-bold italic">{COMPANY_SLOGAN}</p>
-               <p className="text-slate-600 mt-2 font-medium">{APP_TITLE}</p>
+               <h1 className="text-3xl font-extrabold text-slate-900 uppercase tracking-tight">{COMPANY_NAME}</h1>
+               <p className="text-lg text-slate-600 font-bold italic">{COMPANY_SLOGAN}</p>
+               <div className="mt-2 inline-block bg-slate-100 px-3 py-1 rounded text-sm font-bold text-slate-500 uppercase tracking-wider border border-slate-200">
+                 {APP_TITLE}
+               </div>
              </div>
           </div>
-          <div className="text-right text-sm text-slate-500">
-             <p><strong>Área:</strong> {selectedAreaStats}</p>
-             <p><strong>Jornada:</strong> {selectedJornadaStats}</p>
-             <p><strong>Periodo:</strong> {MONTHS[selectedMonth]} {selectedYear}</p>
-             <p>Generado: {new Date().toLocaleDateString()}</p>
+          <div className="text-right">
+             <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Fecha de Emisión</div>
+             <div className="text-xl font-bold text-slate-900">{new Date().toLocaleDateString()}</div>
+             <div className="text-sm text-slate-500">{new Date().toLocaleTimeString()}</div>
+          </div>
+        </div>
+
+        {/* Tarjetas de Contexto (Grid Impactante) */}
+        <div className="grid grid-cols-4 gap-4 mb-8">
+          <div className="border-2 border-slate-200 rounded-lg p-4 text-center">
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Área Reportada</div>
+            <div className="text-xl font-black text-slate-900 uppercase truncate">{selectedAreaStats}</div>
+          </div>
+          <div className="border-2 border-slate-200 rounded-lg p-4 text-center">
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Jornada</div>
+            <div className="text-xl font-black text-slate-900 uppercase">{selectedJornadaStats}</div>
+          </div>
+          <div className="border-2 border-slate-200 rounded-lg p-4 text-center">
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mes</div>
+            <div className="text-xl font-black text-slate-900 uppercase">{MONTHS[selectedMonth]}</div>
+          </div>
+          <div className="border-2 border-slate-200 rounded-lg p-4 text-center">
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Año</div>
+            <div className="text-xl font-black text-slate-900">{selectedYear}</div>
           </div>
         </div>
       </div>
@@ -450,21 +469,17 @@ export default function App() {
                     <div className="h-64 w-full">
                       {chartData.some(d => d.tempActual !== null) ? (
                         <ResponsiveContainer width="100%" height="100%">
-                          {/* YAxis domain en 'auto' permite ver puntos que estén fuera de 10-35 */}
                           <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                             <XAxis dataKey="name" tick={{fontSize: 10}} interval={0} angle={-45} textAnchor="end" height={50}/>
                             <YAxis domain={['auto', 'auto']} />
                             <Tooltip />
                             <Legend />
-                            {/* LÍNEAS DE RANGO (Amarillas) */}
                             <ReferenceLine y={15} stroke="gold" strokeDasharray="5 5" label={{ value: "Min (15)", fill: "orange", fontSize: 10 }} />
                             <ReferenceLine y={30} stroke="gold" strokeDasharray="5 5" label={{ value: "Max (30)", fill: "orange", fontSize: 10 }} />
-                            
-                            {/* LÍNEAS DE DATOS (Colores solicitados) */}
-                            <Line type="monotone" dataKey="tempMin" stroke="blue" name="Min Reg." dot={false} strokeWidth={2} />
-                            <Line type="monotone" dataKey="tempActual" stroke="black" name="Actual" strokeWidth={3} />
-                            <Line type="monotone" dataKey="tempMax" stroke="red" name="Max Reg." dot={false} strokeWidth={2} />
+                            <Line connectNulls={true} type="monotone" dataKey="tempMin" stroke="blue" name="Min Reg." dot={false} strokeWidth={2} />
+                            <Line connectNulls={true} type="monotone" dataKey="tempActual" stroke="black" name="Actual" strokeWidth={3} />
+                            <Line connectNulls={true} type="monotone" dataKey="tempMax" stroke="red" name="Max Reg." dot={false} strokeWidth={2} />
                           </LineChart>
                         </ResponsiveContainer>
                       ) : <div className="h-full flex items-center justify-center text-slate-400">Sin datos de Temperatura</div>}
@@ -483,14 +498,11 @@ export default function App() {
                             <YAxis domain={[0, 100]} />
                             <Tooltip />
                             <Legend />
-                            {/* LÍNEAS DE RANGO (Amarillas) */}
                             <ReferenceLine y={35} stroke="gold" strokeDasharray="5 5" label={{ value: "Min (35)", fill: "orange", fontSize: 10 }} />
                             <ReferenceLine y={70} stroke="gold" strokeDasharray="5 5" label={{ value: "Max (70)", fill: "orange", fontSize: 10 }} />
-                            
-                            {/* LÍNEAS DE DATOS (Colores solicitados) */}
-                            <Line type="monotone" dataKey="humMin" stroke="blue" name="Min Reg." dot={false} strokeWidth={2} />
-                            <Line type="monotone" dataKey="humActual" stroke="black" name="Actual" strokeWidth={3} />
-                            <Line type="monotone" dataKey="humMax" stroke="red" name="Max Reg." dot={false} strokeWidth={2} />
+                            <Line connectNulls={true} type="monotone" dataKey="humMin" stroke="blue" name="Min Reg." dot={false} strokeWidth={2} />
+                            <Line connectNulls={true} type="monotone" dataKey="humActual" stroke="black" name="Actual" strokeWidth={3} />
+                            <Line connectNulls={true} type="monotone" dataKey="humMax" stroke="red" name="Max Reg." dot={false} strokeWidth={2} />
                           </LineChart>
                         </ResponsiveContainer>
                       ) : <div className="h-full flex items-center justify-center text-slate-400">Sin datos de Humedad</div>}
