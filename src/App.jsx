@@ -17,7 +17,8 @@ import {
   RefreshCw,
   ArrowDown,
   ArrowUp,
-  Activity
+  Activity,
+  Microscope
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -41,6 +42,36 @@ const PRIMARY_COLOR = "#158F97";
 const COMPANY_LOGO_URL = "https://i.postimg.cc/L8QN7rqJ/LOGO-CJ-removebg-preview.png";
 
 const AREAS = ["OPTICA", "FARMACIA", "PROCEDIMIENTOS", "TOMA MUESTRA", "ODONTOLOGIA", "LABORATORIO"];
+
+// ✅ NUEVAS ZONAS DE LABORATORIO (Actualizado)
+const LAB_ZONES = [
+  "LABORATORIO", // General
+  "BAÑO SEROLOGICO",
+  "CLUB DE LEONES",
+  "DEPOSITO INSUMOS",
+  "NEVERA TRANSPORTE",
+  "NEVERA ULTRALAB",
+  "NEVERA WHIRPOOL",
+  "CONGELADOR",
+  "TOMA DE MUESTRA",
+  "TOMA DE MUESTRA CLAN"
+];
+
+// ✅ CONFIGURACIÓN DE RANGOS ESPECÍFICOS (Actualizado)
+const ZONE_LIMITS = {
+  // Rango por defecto (para oficinas, toma de muestra, club de leones, deposito, etc.)
+  "DEFAULT": { temp: [15, 30], hum: [35, 70] }, 
+  
+  // Equipos con rangos especiales
+  "BAÑO SEROLOGICO":    { temp: [10, 50], hum: [0, 100] },
+  "NEVERA TRANSPORTE":  { temp: [2, 8],   hum: [0, 100] },
+  "NEVERA ULTRALAB":    { temp: [2, 8],   hum: [0, 100] },
+  "NEVERA WHIRPOOL":    { temp: [2, 8],   hum: [0, 100] },
+  "CONGELADOR":         { temp: [-5, 0],  hum: [0, 100] }, // Rango 0 a -5
+  
+  // Los que no están aquí (Club de Leones, etc.) usarán DEFAULT automáticamente
+};
+
 const JORNADAS = ["Mañana", "Tarde"];
 const MONTHS = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
 
@@ -63,6 +94,7 @@ export default function App() {
     fecha: new Date().toISOString().split('T')[0],
     jornada: 'Mañana',
     area: AREAS[0],
+    subArea: LAB_ZONES[0], 
     tempMin: '', tempActual: '', tempMax: '',
     humMin: '', humActual: '', humMax: '',
     registradoPor: '', observaciones: ''
@@ -75,6 +107,15 @@ export default function App() {
     const cleanVal = val.toString().replace(',', '.');
     const num = parseFloat(cleanVal);
     return isNaN(num) ? null : num;
+  };
+
+  // ✅ OBTENER RANGOS ACTUALES
+  const getCurrentLimits = (areaName) => {
+    // Busca si el nombre del área contiene alguna de las claves especiales
+    const specificKey = Object.keys(ZONE_LIMITS).find(key => 
+      areaName.includes(key) && key !== "DEFAULT"
+    );
+    return specificKey ? ZONE_LIMITS[specificKey] : ZONE_LIMITS["DEFAULT"];
   };
 
   // --- CARGA DE DATOS ---
@@ -114,15 +155,13 @@ export default function App() {
             fecha: normalizedItem['fecha'],
             hora: normalizedItem['hora registro'] || normalizedItem['hora'],
             jornada: normalizedItem['jornada'],
-            area: normalizedItem['area'],
+            area: normalizedItem['area'], 
             registradoPor: normalizedItem['responsable'] || normalizedItem['registradopor'],
             observaciones: normalizedItem['observaciones'],
             type: type,
-            
             tempActual: type.includes('temp') ? valActual : null,
             tempMin: type.includes('temp') ? valMin : null,
             tempMax: type.includes('temp') ? valMax : null,
-            
             humActual: type.includes('hum') ? valActual : null,
             humMin: type.includes('hum') ? valMin : null,
             humMax: type.includes('hum') ? valMax : null,
@@ -151,29 +190,31 @@ export default function App() {
     };
   }, []);
 
-  // --- LÓGICA DE FORMULARIO (CON MAYÚSCULAS FORZADAS) ---
+  // --- LÓGICA DE FORMULARIO ---
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    
-    // ✅ AQUÍ ESTÁ EL CAMBIO: Si es nombre u observación, forzamos mayúsculas
     let finalValue = value;
     if (name === 'registradoPor' || name === 'observaciones') {
       finalValue = value.toUpperCase();
     }
-
     setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
 
+  // ✅ Validación dinámica
   const isOutOfRange = (val) => {
     if (!val) return false;
     const num = parseNum(val);
-    return num < 15 || num > 30;
+    const currentAreaName = formData.area === 'LABORATORIO' ? formData.subArea : formData.area;
+    const limits = getCurrentLimits(currentAreaName);
+    return num < limits.temp[0] || num > limits.temp[1];
   };
 
   const isHumidityOutOfRange = (val) => {
     if (!val) return false;
     const num = parseNum(val);
-    return num < 35 || num > 70;
+    const currentAreaName = formData.area === 'LABORATORIO' ? formData.subArea : formData.area;
+    const limits = getCurrentLimits(currentAreaName);
+    return num < limits.hum[0] || num > limits.hum[1];
   };
 
   const handleSubmit = async (e) => {
@@ -182,8 +223,13 @@ export default function App() {
     if (formType === 'temperatura' && !formData.tempActual) { alert("Debe ingresar la Temperatura Actual."); return; }
     if (formType === 'humedad' && !formData.humActual) { alert("Debe ingresar la Humedad Actual."); return; }
 
+    const finalAreaName = formData.area === 'LABORATORIO' 
+      ? `LABORATORIO - ${formData.subArea}` 
+      : formData.area;
+
     const newRecord = {
       ...formData,
+      area: finalAreaName, 
       type: formType === 'temperatura' ? 'Temperatura' : 'Humedad', 
       tempMin: formType === 'temperatura' ? formData.tempMin : '',
       tempActual: formType === 'temperatura' ? formData.tempActual : '',
@@ -201,8 +247,13 @@ export default function App() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newRecord),
       });
-      alert("✅ Registro guardado exitosamente en Google Sheets.");
-      setFormData(prev => ({ ...prev, tempMin: '', tempActual: '', tempMax: '', humMin: '', humActual: '', humMax: '', observaciones: '' }));
+      alert("✅ Registro guardado exitosamente.");
+      setFormData(prev => ({ 
+        ...prev, 
+        tempMin: '', tempActual: '', tempMax: '', 
+        humMin: '', humActual: '', humMax: '', 
+        observaciones: '' 
+      }));
       setTimeout(fetchSheetData, 1000); 
     } catch (error) {
       console.error("Error al guardar:", error);
@@ -258,6 +309,12 @@ export default function App() {
     });
   };
 
+  const getUniqueAreas = () => {
+    const areasInRecords = records.map(r => r.area);
+    const uniqueSet = new Set([...AREAS, ...areasInRecords]);
+    return Array.from(uniqueSet).sort();
+  };
+
   const getChartData = () => {
     const areaRecords = getFilteredRecords();
     const grouped = {};
@@ -267,7 +324,6 @@ export default function App() {
       if(!r.fecha) return;
       const dateStr = r.fecha.toString().split('T')[0];
       const day = dateStr.split('-')[2];
-      
       const key = selectedJornadaStats === 'Todas' ? `${day}-${r.jornada}` : `${day}`;
       
       if (!grouped[key]) {
@@ -292,13 +348,16 @@ export default function App() {
         if (r.humMax !== null) grouped[key].humMax = r.humMax;
       }
     });
-    
     return Object.values(grouped).sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
   };
 
   const chartData = getChartData();
   const currentYear = new Date().getFullYear();
   const years = Array.from({length: 5}, (_, i) => currentYear - i);
+  const availableAreas = getUniqueAreas();
+  
+  // ✅ OBTENER LÍMITES PARA EL GRÁFICO SELECCIONADO
+  const currentChartLimits = getCurrentLimits(selectedAreaStats);
 
   const calculateAverage = (field) => {
     const validRecords = getFilteredRecords().filter(r => r[field] !== null && r[field] !== undefined);
@@ -309,7 +368,6 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-      {/* ESTILOS DE IMPRESIÓN (Landscape y ocultar elementos) */}
       <style>{`
         @media print {
           @page { size: landscape; margin: 10mm; }
@@ -419,7 +477,21 @@ export default function App() {
                   <div className="space-y-4">
                     <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-1"><Calendar size={14}/> Fecha</label><input type="date" name="fecha" required value={formData.fecha} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" /></div>
                     <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-1"><Clock size={14}/> Jornada</label><select name="jornada" value={formData.jornada} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">{JORNADAS.map(j => <option key={j} value={j}>{j}</option>)}</select></div>
-                    <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-1"><Building2 size={14}/> Área</label><select name="area" value={formData.area} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">{AREAS.map(a => <option key={a} value={a}>{a}</option>)}</select></div>
+                    
+                    {/* SELECCIÓN DE ÁREA + SUB-ÁREA si es Laboratorio */}
+                    <div className="space-y-2">
+                      <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-1"><Building2 size={14}/> Área</label><select name="area" value={formData.area} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">{AREAS.map(a => <option key={a} value={a}>{a}</option>)}</select></div>
+                      
+                      {/* ✅ AQUÍ APARECE EL SELECTOR DE LABORATORIO */}
+                      {formData.area === 'LABORATORIO' && (
+                        <div className="animate-fade-in-down bg-blue-50 p-2 rounded-lg border border-blue-100">
+                          <label className="block text-xs font-bold text-blue-700 mb-1 flex items-center gap-1"><Microscope size={12}/> Punto de Control (Lab)</label>
+                          <select name="subArea" value={formData.subArea} onChange={handleInputChange} className="w-full border border-blue-300 rounded-md px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white text-blue-900 font-medium">
+                            {LAB_ZONES.map(z => <option key={z} value={z}>{z}</option>)}
+                          </select>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Bloque 2 */}
@@ -474,7 +546,8 @@ export default function App() {
                     <option value="Humedad">Humedad</option>
                   </select>
                 </div>
-                <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área</label><select value={selectedAreaStats} onChange={(e) => setSelectedAreaStats(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">{AREAS.map(a => <option key={a} value={a}>{a}</option>)}</select></div>
+                {/* ✅ FILTRO DE ÁREA DINÁMICO */}
+                <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área</label><select value={selectedAreaStats} onChange={(e) => setSelectedAreaStats(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">{availableAreas.map(a => <option key={a} value={a}>{a}</option>)}</select></div>
                 <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Jornada</label><select value={selectedJornadaStats} onChange={(e) => setSelectedJornadaStats(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="Todas">Todas</option>{JORNADAS.map(j => <option key={j} value={j}>{j}</option>)}</select></div>
                 <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Mes</label><select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">{MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}</select></div>
                 <div className="w-32"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Año</label><select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">{years.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
@@ -561,8 +634,10 @@ export default function App() {
                               <YAxis domain={['auto', 'auto']} />
                               <Tooltip />
                               <Legend />
-                              <ReferenceLine y={15} stroke="gold" strokeDasharray="5 5" label={{ value: "Min (15)", fill: "orange", fontSize: 10 }} />
-                              <ReferenceLine y={30} stroke="gold" strokeDasharray="5 5" label={{ value: "Max (30)", fill: "orange", fontSize: 10 }} />
+                              {/* ✅ LÍMITES DINÁMICOS EN EL GRÁFICO */}
+                              <ReferenceLine y={currentChartLimits.temp[0]} stroke="gold" strokeDasharray="5 5" label={{ value: `Min (${currentChartLimits.temp[0]})`, fill: "orange", fontSize: 10 }} />
+                              <ReferenceLine y={currentChartLimits.temp[1]} stroke="gold" strokeDasharray="5 5" label={{ value: `Max (${currentChartLimits.temp[1]})`, fill: "orange", fontSize: 10 }} />
+                              
                               <Line connectNulls={true} type="monotone" dataKey="tempMin" stroke="blue" name="Min Reg." dot={false} strokeWidth={2} />
                               <Line connectNulls={true} type="monotone" dataKey="tempActual" stroke="black" name="Actual" strokeWidth={3} />
                               <Line connectNulls={true} type="monotone" dataKey="tempMax" stroke="red" name="Max Reg." dot={false} strokeWidth={2} />
@@ -586,8 +661,10 @@ export default function App() {
                               <YAxis domain={[0, 100]} />
                               <Tooltip />
                               <Legend />
-                              <ReferenceLine y={35} stroke="gold" strokeDasharray="5 5" label={{ value: "Min (35)", fill: "orange", fontSize: 10 }} />
-                              <ReferenceLine y={70} stroke="gold" strokeDasharray="5 5" label={{ value: "Max (70)", fill: "orange", fontSize: 10 }} />
+                              {/* ✅ LÍMITES DINÁMICOS EN EL GRÁFICO DE HUMEDAD */}
+                              <ReferenceLine y={currentChartLimits.hum[0]} stroke="gold" strokeDasharray="5 5" label={{ value: `Min (${currentChartLimits.hum[0]})`, fill: "orange", fontSize: 10 }} />
+                              <ReferenceLine y={currentChartLimits.hum[1]} stroke="gold" strokeDasharray="5 5" label={{ value: `Max (${currentChartLimits.hum[1]})`, fill: "orange", fontSize: 10 }} />
+                              
                               <Line connectNulls={true} type="monotone" dataKey="humMin" stroke="blue" name="Min Reg." dot={false} strokeWidth={2} />
                               <Line connectNulls={true} type="monotone" dataKey="humActual" stroke="black" name="Actual" strokeWidth={3} />
                               <Line connectNulls={true} type="monotone" dataKey="humMax" stroke="red" name="Max Reg." dot={false} strokeWidth={2} />
