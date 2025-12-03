@@ -56,7 +56,8 @@ export default function App() {
   const [selectedAreaStats, setSelectedAreaStats] = useState(AREAS[0]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedJornadaStats, setSelectedJornadaStats] = useState('Todas'); 
+  const [selectedJornadaStats, setSelectedJornadaStats] = useState('Todas');
+  const [selectedTypeStats, setSelectedTypeStats] = useState('Temperatura'); // ✅ Nuevo Filtro de Tipo
 
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
@@ -349,22 +350,26 @@ export default function App() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-5 gap-4 mb-8">
           <div className="border-2 border-slate-200 rounded-lg p-4 text-center">
-            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Área Reportada</div>
-            <div className="text-xl font-black text-slate-900 uppercase truncate">{selectedAreaStats}</div>
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Área</div>
+            <div className="text-lg font-black text-slate-900 uppercase truncate">{selectedAreaStats}</div>
+          </div>
+          <div className="border-2 border-slate-200 rounded-lg p-4 text-center">
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Variable</div>
+            <div className="text-lg font-black text-slate-900 uppercase">{selectedTypeStats}</div>
           </div>
           <div className="border-2 border-slate-200 rounded-lg p-4 text-center">
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Jornada</div>
-            <div className="text-xl font-black text-slate-900 uppercase">{selectedJornadaStats}</div>
+            <div className="text-lg font-black text-slate-900 uppercase">{selectedJornadaStats}</div>
           </div>
           <div className="border-2 border-slate-200 rounded-lg p-4 text-center">
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mes</div>
-            <div className="text-xl font-black text-slate-900 uppercase">{MONTHS[selectedMonth]}</div>
+            <div className="text-lg font-black text-slate-900 uppercase">{MONTHS[selectedMonth]}</div>
           </div>
           <div className="border-2 border-slate-200 rounded-lg p-4 text-center">
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Año</div>
-            <div className="text-xl font-black text-slate-900">{selectedYear}</div>
+            <div className="text-lg font-black text-slate-900">{selectedYear}</div>
           </div>
         </div>
       </div>
@@ -444,6 +449,13 @@ export default function App() {
             {/* Filtros */}
             <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col lg:flex-row justify-between items-end lg:items-center gap-4 print:hidden">
               <div className="flex flex-col md:flex-row gap-4 w-full">
+                <div className="flex-1">
+                  <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Variable</label>
+                  <select value={selectedTypeStats} onChange={(e) => setSelectedTypeStats(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    <option value="Temperatura">Temperatura</option>
+                    <option value="Humedad">Humedad</option>
+                  </select>
+                </div>
                 <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área</label><select value={selectedAreaStats} onChange={(e) => setSelectedAreaStats(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">{AREAS.map(a => <option key={a} value={a}>{a}</option>)}</select></div>
                 <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Jornada</label><select value={selectedJornadaStats} onChange={(e) => setSelectedJornadaStats(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="Todas">Todas</option>{JORNADAS.map(j => <option key={j} value={j}>{j}</option>)}</select></div>
                 <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Mes</label><select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">{MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}</select></div>
@@ -452,7 +464,6 @@ export default function App() {
               <div className="flex gap-2">
                 <button onClick={() => window.print()} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors whitespace-nowrap h-10 shadow-sm"><Printer size={16} /> Imprimir / PDF</button>
                 <button onClick={exportToCSV} className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors whitespace-nowrap h-10 shadow-sm"><Download size={16} /> CSV</button>
-                <a href={GOOGLE_SHEETS_WEBHOOK_URL.replace('/exec', '/edit')} target="_blank" rel="noreferrer" className="bg-green-100 hover:bg-green-200 text-green-800 px-4 py-2 rounded-md flex items-center gap-2 text-sm font-medium transition-colors whitespace-nowrap h-10 shadow-sm"><FileText size={16} /> Ver Sheet</a>
               </div>
             </div>
 
@@ -463,103 +474,111 @@ export default function App() {
               </div>
             ) : (
               <>
-                {/* --- SECCIÓN 1: PROMEDIOS DETALLADOS (3 COLUMNAS) --- */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-2 print:gap-4">
+                {/* --- SECCIÓN 1: PROMEDIOS DETALLADOS (FILTRADOS) --- */}
+                <div className="grid grid-cols-1 gap-6">
                     
-                    {/* Tarjeta Promedio Temp */}
-                    <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500 flex flex-col justify-between">
-                        <div className="flex justify-between items-center mb-4">
-                            <h4 className="text-lg font-bold text-slate-700 flex items-center gap-2">
-                                <Thermometer className="text-blue-600" /> Temperatura Promedio
-                            </h4>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 text-center divide-x divide-slate-100">
-                            <div className="flex flex-col items-center">
-                                <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><ArrowDown size={12}/> Mín</span>
-                                <span className="text-lg font-bold text-blue-600">{calculateAverage('tempMin') + '°C'}</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Activity size={12}/> Actual</span>
-                                <span className="text-2xl font-extrabold text-blue-800">{calculateAverage('tempActual') + '°C'}</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><ArrowUp size={12}/> Máx</span>
-                                <span className="text-lg font-bold text-red-500">{calculateAverage('tempMax') + '°C'}</span>
-                            </div>
-                        </div>
-                    </div>
+                    {/* Tarjeta Promedio Temp (SOLO SI SELECCIONADO) */}
+                    {selectedTypeStats === 'Temperatura' && (
+                      <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500 flex flex-col justify-between">
+                          <div className="flex justify-between items-center mb-4">
+                              <h4 className="text-lg font-bold text-slate-700 flex items-center gap-2">
+                                  <Thermometer className="text-blue-600" /> Temperatura Promedio
+                              </h4>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center divide-x divide-slate-100">
+                              <div className="flex flex-col items-center">
+                                  <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><ArrowDown size={12}/> Mín</span>
+                                  <span className="text-lg font-bold text-blue-600">{calculateAverage('tempMin') + '°C'}</span>
+                              </div>
+                              <div className="flex flex-col items-center">
+                                  <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Activity size={12}/> Actual</span>
+                                  <span className="text-2xl font-extrabold text-blue-800">{calculateAverage('tempActual') + '°C'}</span>
+                              </div>
+                              <div className="flex flex-col items-center">
+                                  <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><ArrowUp size={12}/> Máx</span>
+                                  <span className="text-lg font-bold text-red-500">{calculateAverage('tempMax') + '°C'}</span>
+                              </div>
+                          </div>
+                      </div>
+                    )}
 
-                    {/* Tarjeta Promedio Humedad */}
-                    <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-purple-500 flex flex-col justify-between">
-                        <div className="flex justify-between items-center mb-4">
-                            <h4 className="text-lg font-bold text-slate-700 flex items-center gap-2">
-                                <Droplets className="text-purple-600" /> Humedad Promedio
-                            </h4>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2 text-center divide-x divide-slate-100">
-                            <div className="flex flex-col items-center">
-                                <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><ArrowDown size={12}/> Mín</span>
-                                <span className="text-lg font-bold text-purple-500">{calculateAverage('humMin') + '%'}</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Activity size={12}/> Actual</span>
-                                <span className="text-2xl font-extrabold text-purple-800">{calculateAverage('humActual') + '%'}</span>
-                            </div>
-                            <div className="flex flex-col items-center">
-                                <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><ArrowUp size={12}/> Máx</span>
-                                <span className="text-lg font-bold text-purple-600">{calculateAverage('humMax') + '%'}</span>
-                            </div>
-                        </div>
-                    </div>
+                    {/* Tarjeta Promedio Humedad (SOLO SI SELECCIONADO) */}
+                    {selectedTypeStats === 'Humedad' && (
+                      <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-purple-500 flex flex-col justify-between">
+                          <div className="flex justify-between items-center mb-4">
+                              <h4 className="text-lg font-bold text-slate-700 flex items-center gap-2">
+                                  <Droplets className="text-purple-600" /> Humedad Promedio
+                              </h4>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center divide-x divide-slate-100">
+                              <div className="flex flex-col items-center">
+                                  <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><ArrowDown size={12}/> Mín</span>
+                                  <span className="text-lg font-bold text-purple-500">{calculateAverage('humMin') + '%'}</span>
+                              </div>
+                              <div className="flex flex-col items-center">
+                                  <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Activity size={12}/> Actual</span>
+                                  <span className="text-2xl font-extrabold text-purple-800">{calculateAverage('humActual') + '%'}</span>
+                              </div>
+                              <div className="flex flex-col items-center">
+                                  <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><ArrowUp size={12}/> Máx</span>
+                                  <span className="text-lg font-bold text-purple-600">{calculateAverage('humMax') + '%'}</span>
+                              </div>
+                          </div>
+                      </div>
+                    )}
                 </div>
 
-                {/* --- SECCIÓN 2: GRÁFICOS GRANDES --- */}
+                {/* --- SECCIÓN 2: GRÁFICOS GRANDES (FILTRADOS) --- */}
                 <div className="space-y-8">
                   {/* Gráfica de Temperatura */}
-                  <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
-                    <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-black"><Thermometer className="text-blue-500 print:text-black" /> Temperatura (°C)</h3></div>
-                    <div className="h-96 w-full"> 
-                      {chartData.some(d => d.tempActual !== null) ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                            <XAxis dataKey="name" tick={{fontSize: 10}} interval={0} angle={-45} textAnchor="end" height={50}/>
-                            <YAxis domain={['auto', 'auto']} />
-                            <Tooltip />
-                            <Legend />
-                            <ReferenceLine y={15} stroke="gold" strokeDasharray="5 5" label={{ value: "Min (15)", fill: "orange", fontSize: 10 }} />
-                            <ReferenceLine y={30} stroke="gold" strokeDasharray="5 5" label={{ value: "Max (30)", fill: "orange", fontSize: 10 }} />
-                            <Line connectNulls={true} type="monotone" dataKey="tempMin" stroke="blue" name="Min Reg." dot={false} strokeWidth={2} />
-                            <Line connectNulls={true} type="monotone" dataKey="tempActual" stroke="black" name="Actual" strokeWidth={3} />
-                            <Line connectNulls={true} type="monotone" dataKey="tempMax" stroke="red" name="Max Reg." dot={false} strokeWidth={2} />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      ) : <div className="h-full flex items-center justify-center text-slate-400">Sin datos de Temperatura</div>}
+                  {selectedTypeStats === 'Temperatura' && (
+                    <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
+                      <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-black"><Thermometer className="text-blue-500 print:text-black" /> Temperatura (°C)</h3></div>
+                      <div className="h-96 w-full"> 
+                        {chartData.some(d => d.tempActual !== null) ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                              <XAxis dataKey="name" tick={{fontSize: 10}} interval={0} angle={-45} textAnchor="end" height={50}/>
+                              <YAxis domain={['auto', 'auto']} />
+                              <Tooltip />
+                              <Legend />
+                              <ReferenceLine y={15} stroke="gold" strokeDasharray="5 5" label={{ value: "Min (15)", fill: "orange", fontSize: 10 }} />
+                              <ReferenceLine y={30} stroke="gold" strokeDasharray="5 5" label={{ value: "Max (30)", fill: "orange", fontSize: 10 }} />
+                              <Line connectNulls={true} type="monotone" dataKey="tempMin" stroke="blue" name="Min Reg." dot={false} strokeWidth={2} />
+                              <Line connectNulls={true} type="monotone" dataKey="tempActual" stroke="black" name="Actual" strokeWidth={3} />
+                              <Line connectNulls={true} type="monotone" dataKey="tempMax" stroke="red" name="Max Reg." dot={false} strokeWidth={2} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        ) : <div className="h-full flex items-center justify-center text-slate-400">Sin datos de Temperatura</div>}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Gráfica de Humedad */}
-                  <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
-                    <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-black"><Droplets className="text-purple-500 print:text-black" /> Humedad (%)</h3></div>
-                    <div className="h-96 w-full">
-                      {chartData.some(d => d.humActual !== null) ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                            <XAxis dataKey="name" tick={{fontSize: 10}} interval={0} angle={-45} textAnchor="end" height={50}/>
-                            <YAxis domain={[0, 100]} />
-                            <Tooltip />
-                            <Legend />
-                            <ReferenceLine y={35} stroke="gold" strokeDasharray="5 5" label={{ value: "Min (35)", fill: "orange", fontSize: 10 }} />
-                            <ReferenceLine y={70} stroke="gold" strokeDasharray="5 5" label={{ value: "Max (70)", fill: "orange", fontSize: 10 }} />
-                            <Line connectNulls={true} type="monotone" dataKey="humMin" stroke="blue" name="Min Reg." dot={false} strokeWidth={2} />
-                            <Line connectNulls={true} type="monotone" dataKey="humActual" stroke="black" name="Actual" strokeWidth={3} />
-                            <Line connectNulls={true} type="monotone" dataKey="humMax" stroke="red" name="Max Reg." dot={false} strokeWidth={2} />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      ) : <div className="h-full flex items-center justify-center text-slate-400">Sin datos de Humedad</div>}
+                  {selectedTypeStats === 'Humedad' && (
+                    <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
+                      <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-black"><Droplets className="text-purple-500 print:text-black" /> Humedad (%)</h3></div>
+                      <div className="h-96 w-full">
+                        {chartData.some(d => d.humActual !== null) ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                              <XAxis dataKey="name" tick={{fontSize: 10}} interval={0} angle={-45} textAnchor="end" height={50}/>
+                              <YAxis domain={[0, 100]} />
+                              <Tooltip />
+                              <Legend />
+                              <ReferenceLine y={35} stroke="gold" strokeDasharray="5 5" label={{ value: "Min (35)", fill: "orange", fontSize: 10 }} />
+                              <ReferenceLine y={70} stroke="gold" strokeDasharray="5 5" label={{ value: "Max (70)", fill: "orange", fontSize: 10 }} />
+                              <Line connectNulls={true} type="monotone" dataKey="humMin" stroke="blue" name="Min Reg." dot={false} strokeWidth={2} />
+                              <Line connectNulls={true} type="monotone" dataKey="humActual" stroke="black" name="Actual" strokeWidth={3} />
+                              <Line connectNulls={true} type="monotone" dataKey="humMax" stroke="red" name="Max Reg." dot={false} strokeWidth={2} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        ) : <div className="h-full flex items-center justify-center text-slate-400">Sin datos de Humedad</div>}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               </>
             )}
