@@ -14,7 +14,10 @@ import {
   FileText,
   Cloud,
   Printer,
-  RefreshCw 
+  RefreshCw,
+  ArrowDown,
+  ArrowUp,
+  Activity
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -298,7 +301,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
-      {/* HEADER WEB (SOLO PANTALLA) */}
+      {/* HEADER WEB */}
       <header className="bg-white shadow-md sticky top-0 z-50 print:hidden border-b border-slate-100">
         <div className="container mx-auto px-4 py-2 flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center gap-4 mb-2 md:mb-0 w-full md:w-auto justify-center md:justify-start">
@@ -326,9 +329,8 @@ export default function App() {
         </div>
       </header>
 
-      {/* --- HEADER IMPRESIÓN (DISEÑO IMPACTANTE) --- */}
+      {/* HEADER IMPRESIÓN */}
       <div className="hidden print:block w-full mb-8">
-        {/* Cabecera Principal */}
         <div className="flex justify-between items-start border-b-4 border-slate-800 pb-6 mb-6">
           <div className="flex items-center gap-6">
              <img src={COMPANY_LOGO_URL} alt="Logo" className="h-24 w-auto object-contain" />
@@ -347,7 +349,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Tarjetas de Contexto (Grid Impactante) */}
         <div className="grid grid-cols-4 gap-4 mb-8">
           <div className="border-2 border-slate-200 rounded-lg p-4 text-center">
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Área Reportada</div>
@@ -439,7 +440,8 @@ export default function App() {
 
         {/* --- VISTA DE ESTADISTICAS --- */}
         {activeTab === 'estadisticas' && (
-          <div className="space-y-6">
+          <div className="space-y-8">
+            {/* Filtros */}
             <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col lg:flex-row justify-between items-end lg:items-center gap-4 print:hidden">
               <div className="flex flex-col md:flex-row gap-4 w-full">
                 <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área</label><select value={selectedAreaStats} onChange={(e) => setSelectedAreaStats(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">{AREAS.map(a => <option key={a} value={a}>{a}</option>)}</select></div>
@@ -460,13 +462,63 @@ export default function App() {
                 <p className="text-slate-500">Cargando datos desde Google Sheets...</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-8">
-                  
+              <>
+                {/* --- SECCIÓN 1: PROMEDIOS DETALLADOS (3 COLUMNAS) --- */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print:grid-cols-2 print:gap-4">
+                    
+                    {/* Tarjeta Promedio Temp */}
+                    <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-blue-500 flex flex-col justify-between">
+                        <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-lg font-bold text-slate-700 flex items-center gap-2">
+                                <Thermometer className="text-blue-600" /> Temperatura Promedio
+                            </h4>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-center divide-x divide-slate-100">
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><ArrowDown size={12}/> Mín</span>
+                                <span className="text-lg font-bold text-blue-600">{calculateAverage('tempMin') + '°C'}</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Activity size={12}/> Actual</span>
+                                <span className="text-2xl font-extrabold text-blue-800">{calculateAverage('tempActual') + '°C'}</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><ArrowUp size={12}/> Máx</span>
+                                <span className="text-lg font-bold text-red-500">{calculateAverage('tempMax') + '°C'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Tarjeta Promedio Humedad */}
+                    <div className="bg-white p-6 rounded-xl shadow-md border-l-4 border-purple-500 flex flex-col justify-between">
+                        <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-lg font-bold text-slate-700 flex items-center gap-2">
+                                <Droplets className="text-purple-600" /> Humedad Promedio
+                            </h4>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2 text-center divide-x divide-slate-100">
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><ArrowDown size={12}/> Mín</span>
+                                <span className="text-lg font-bold text-purple-500">{calculateAverage('humMin') + '%'}</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><Activity size={12}/> Actual</span>
+                                <span className="text-2xl font-extrabold text-purple-800">{calculateAverage('humActual') + '%'}</span>
+                            </div>
+                            <div className="flex flex-col items-center">
+                                <span className="text-xs font-bold text-slate-400 uppercase mb-1 flex items-center gap-1"><ArrowUp size={12}/> Máx</span>
+                                <span className="text-lg font-bold text-purple-600">{calculateAverage('humMax') + '%'}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* --- SECCIÓN 2: GRÁFICOS GRANDES --- */}
+                <div className="space-y-8">
                   {/* Gráfica de Temperatura */}
                   <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
                     <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-black"><Thermometer className="text-blue-500 print:text-black" /> Temperatura (°C)</h3></div>
-                    <div className="h-64 w-full">
+                    <div className="h-96 w-full"> 
                       {chartData.some(d => d.tempActual !== null) ? (
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
@@ -489,7 +541,7 @@ export default function App() {
                   {/* Gráfica de Humedad */}
                   <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
                     <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-black"><Droplets className="text-purple-500 print:text-black" /> Humedad (%)</h3></div>
-                    <div className="h-64 w-full">
+                    <div className="h-96 w-full">
                       {chartData.some(d => d.humActual !== null) ? (
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
@@ -508,19 +560,8 @@ export default function App() {
                       ) : <div className="h-full flex items-center justify-center text-slate-400">Sin datos de Humedad</div>}
                     </div>
                   </div>
-
                 </div>
-                {/* Estadísticas */}
-                <div className="space-y-4">
-                  <div className="bg-white p-5 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
-                      <h4 className="text-sm font-bold text-slate-500 uppercase mb-4 print:text-black">Estadísticas</h4>
-                      <div className="space-y-4">
-                        <div className="flex justify-between items-end border-b pb-2"><span className="text-slate-600 flex items-center gap-2"><Thermometer size={14}/> Prom. Temp</span><span className="text-xl font-bold text-blue-700 print:text-black">{calculateAverage('tempActual') + '°C'}</span></div>
-                        <div className="flex justify-between items-end border-b pb-2"><span className="text-slate-600 flex items-center gap-2"><Droplets size={14}/> Prom. Hum</span><span className="text-xl font-bold text-purple-700 print:text-black">{calculateAverage('humActual') + '%'}</span></div>
-                      </div>
-                  </div>
-                </div>
-              </div>
+              </>
             )}
           </div>
         )}
