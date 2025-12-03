@@ -18,7 +18,8 @@ import {
   ArrowDown,
   ArrowUp,
   Activity,
-  Microscope
+  Microscope,
+  MapPin
 } from 'lucide-react';
 import { 
   LineChart, 
@@ -43,9 +44,8 @@ const COMPANY_LOGO_URL = "https://i.postimg.cc/L8QN7rqJ/LOGO-CJ-removebg-preview
 
 const AREAS = ["OPTICA", "FARMACIA", "PROCEDIMIENTOS", "TOMA MUESTRA", "ODONTOLOGIA", "LABORATORIO"];
 
-// ✅ NUEVAS ZONAS DE LABORATORIO (Actualizado)
 const LAB_ZONES = [
-  "LABORATORIO", // General
+  "LABORATORIO", 
   "BAÑO SEROLOGICO",
   "CLUB DE LEONES",
   "DEPOSITO INSUMOS",
@@ -57,19 +57,14 @@ const LAB_ZONES = [
   "TOMA DE MUESTRA CLAN"
 ];
 
-// ✅ CONFIGURACIÓN DE RANGOS ESPECÍFICOS (Actualizado)
+// --- RANGOS ---
 const ZONE_LIMITS = {
-  // Rango por defecto (para oficinas, toma de muestra, club de leones, deposito, etc.)
   "DEFAULT": { temp: [15, 30], hum: [35, 70] }, 
-  
-  // Equipos con rangos especiales
   "BAÑO SEROLOGICO":    { temp: [10, 50], hum: [0, 100] },
   "NEVERA TRANSPORTE":  { temp: [2, 8],   hum: [0, 100] },
   "NEVERA ULTRALAB":    { temp: [2, 8],   hum: [0, 100] },
   "NEVERA WHIRPOOL":    { temp: [2, 8],   hum: [0, 100] },
-  "CONGELADOR":         { temp: [-5, 0],  hum: [0, 100] }, // Rango 0 a -5
-  
-  // Los que no están aquí (Club de Leones, etc.) usarán DEFAULT automáticamente
+  "CONGELADOR":         { temp: [-5, 0],  hum: [0, 100] }, 
 };
 
 const JORNADAS = ["Mañana", "Tarde"];
@@ -100,7 +95,6 @@ export default function App() {
     registradoPor: '', observaciones: ''
   });
 
-  // --- AYUDA PARA NÚMEROS ---
   const parseNum = (val) => {
     if (val === null || val === undefined || val === '') return null;
     if (typeof val === 'number') return val;
@@ -109,16 +103,13 @@ export default function App() {
     return isNaN(num) ? null : num;
   };
 
-  // ✅ OBTENER RANGOS ACTUALES
   const getCurrentLimits = (areaName) => {
-    // Busca si el nombre del área contiene alguna de las claves especiales
     const specificKey = Object.keys(ZONE_LIMITS).find(key => 
       areaName.includes(key) && key !== "DEFAULT"
     );
     return specificKey ? ZONE_LIMITS[specificKey] : ZONE_LIMITS["DEFAULT"];
   };
 
-  // --- CARGA DE DATOS ---
   const fetchSheetData = async () => {
     if (!GOOGLE_SHEETS_WEBHOOK_URL) return;
     setLoading(true);
@@ -137,18 +128,8 @@ export default function App() {
           const type = rawType.toString().toLowerCase();
           
           const valActual = parseNum(normalizedItem['actual']);
-          const valMin = parseNum(
-            normalizedItem['mínima'] || 
-            normalizedItem['minima'] || 
-            normalizedItem['min'] ||
-            normalizedItem['mÃnima']
-          );
-          const valMax = parseNum(
-            normalizedItem['máxima'] || 
-            normalizedItem['maxima'] || 
-            normalizedItem['max'] ||
-            normalizedItem['mÃ¡xima']
-          );
+          const valMin = parseNum(normalizedItem['mínima'] || normalizedItem['minima'] || normalizedItem['min'] || normalizedItem['mÃnima']);
+          const valMax = parseNum(normalizedItem['máxima'] || normalizedItem['maxima'] || normalizedItem['max'] || normalizedItem['mÃ¡xima']);
 
           return {
             id: index,
@@ -190,7 +171,6 @@ export default function App() {
     };
   }, []);
 
-  // --- LÓGICA DE FORMULARIO ---
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     let finalValue = value;
@@ -200,7 +180,6 @@ export default function App() {
     setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
 
-  // ✅ Validación dinámica
   const isOutOfRange = (val) => {
     if (!val) return false;
     const num = parseNum(val);
@@ -355,8 +334,6 @@ export default function App() {
   const currentYear = new Date().getFullYear();
   const years = Array.from({length: 5}, (_, i) => currentYear - i);
   const availableAreas = getUniqueAreas();
-  
-  // ✅ OBTENER LÍMITES PARA EL GRÁFICO SELECCIONADO
   const currentChartLimits = getCurrentLimits(selectedAreaStats);
 
   const calculateAverage = (field) => {
@@ -365,6 +342,12 @@ export default function App() {
     const sum = validRecords.reduce((acc, curr) => acc + (parseFloat(curr[field]) || 0), 0);
     return (sum / validRecords.length).toFixed(1);
   };
+
+  // Determinar colores del tema actual
+  const themeColor = formType === 'temperatura' ? 'blue' : 'purple';
+  const gradientHeader = formType === 'temperatura' 
+    ? 'bg-gradient-to-r from-cyan-600 to-blue-600' 
+    : 'bg-gradient-to-r from-fuchsia-600 to-purple-700';
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
@@ -380,26 +363,26 @@ export default function App() {
 
       {/* HEADER WEB */}
       <header className="bg-white shadow-md sticky top-0 z-50 print:hidden border-b border-slate-100">
-        <div className="container mx-auto px-4 py-2 flex flex-col md:flex-row justify-between items-center">
+        <div className="container mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center gap-4 mb-2 md:mb-0 w-full md:w-auto justify-center md:justify-start">
-            <div className="w-16 h-16 flex items-center justify-center shrink-0">
-               <img src={COMPANY_LOGO_URL} alt="Logo" className="w-full h-full object-contain drop-shadow-sm" />
+            <div className="w-16 h-16 flex items-center justify-center shrink-0 bg-white rounded-full shadow-sm p-1">
+               <img src={COMPANY_LOGO_URL} alt="Logo" className="w-full h-full object-contain" />
             </div>
             <div className="flex flex-col">
-              <h1 className="text-lg font-extrabold tracking-tight leading-none text-black uppercase">{COMPANY_NAME}</h1>
-              <p className="text-xs font-bold text-slate-600 italic tracking-wide">{COMPANY_SLOGAN}</p>
+              <h1 className="text-xl font-black tracking-tight leading-none text-slate-800 uppercase">{COMPANY_NAME}</h1>
+              <p className="text-xs font-bold text-slate-500 italic tracking-wide mt-0.5">{COMPANY_SLOGAN}</p>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-[10px] font-bold bg-slate-100 px-2 py-0.5 rounded text-slate-500 uppercase tracking-wider">{APP_TITLE}</span>
-                {loading ? <RefreshCw size={12} className="text-blue-500 animate-spin"/> : <Cloud size={12} className="text-green-600" title="Sincronizado"/>}
+                <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full uppercase tracking-wider border border-slate-200">{APP_TITLE}</span>
+                {loading ? <RefreshCw size={12} className="text-blue-500 animate-spin"/> : <Cloud size={12} className="text-green-500" title="Sincronizado"/>}
               </div>
             </div>
           </div>
 
-          <nav className="flex gap-2 p-1">
-            <button onClick={() => setActiveTab('registro')} className={`px-6 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm font-bold shadow-sm ${activeTab === 'registro' ? 'text-white shadow-md transform scale-105' : 'text-slate-500 hover:bg-slate-50'}`} style={activeTab === 'registro' ? { backgroundColor: PRIMARY_COLOR } : {}}>
+          <nav className="flex gap-2 p-1 bg-slate-100 rounded-xl">
+            <button onClick={() => setActiveTab('registro')} className={`px-6 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm font-bold shadow-sm ${activeTab === 'registro' ? 'bg-white text-blue-600 shadow-md transform scale-105' : 'text-slate-500 hover:text-slate-700'}`}>
               <Save size={18} /> Registro
             </button>
-            <button onClick={() => setActiveTab('estadisticas')} className={`px-6 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm font-bold shadow-sm ${activeTab === 'estadisticas' ? 'text-white shadow-md transform scale-105' : 'text-slate-500 hover:bg-slate-50'}`} style={activeTab === 'estadisticas' ? { backgroundColor: PRIMARY_COLOR } : {}}>
+            <button onClick={() => setActiveTab('estadisticas')} className={`px-6 py-2.5 rounded-lg transition-all flex items-center gap-2 text-sm font-bold shadow-sm ${activeTab === 'estadisticas' ? 'bg-white text-purple-600 shadow-md transform scale-105' : 'text-slate-500 hover:text-slate-700'}`}>
               <History size={18} /> Historial
             </button>
           </nav>
@@ -456,76 +439,189 @@ export default function App() {
         {/* --- VISTA DE REGISTRO --- */}
         {activeTab === 'registro' && (
           <div className="max-w-4xl mx-auto print:hidden">
+            
+            {/* BOTONES DE TIPO DE FORMULARIO */}
             <div className="flex justify-center mb-8">
-              <div className="bg-white p-1.5 rounded-xl shadow-sm border border-slate-200 inline-flex gap-1">
-                <button onClick={() => setFormType('temperatura')} className={`px-6 py-3 rounded-lg flex items-center gap-2 font-bold transition-all ${formType === 'temperatura' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}> <Thermometer size={20} /> Temperatura </button>
-                <button onClick={() => setFormType('humedad')} className={`px-6 py-3 rounded-lg flex items-center gap-2 font-bold transition-all ${formType === 'humedad' ? 'bg-purple-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}> <Droplets size={20} /> Humedad </button>
+              <div className="bg-white p-2 rounded-2xl shadow-sm border border-slate-200 inline-flex gap-2">
+                <button onClick={() => setFormType('temperatura')} 
+                  className={`px-8 py-3 rounded-xl flex items-center gap-2 font-bold transition-all duration-200 ${formType === 'temperatura' ? 'bg-cyan-500 text-white shadow-lg scale-105' : 'text-slate-400 hover:bg-slate-50'}`}> 
+                  <Thermometer size={20} /> Temperatura 
+                </button>
+                <button onClick={() => setFormType('humedad')} 
+                  className={`px-8 py-3 rounded-xl flex items-center gap-2 font-bold transition-all duration-200 ${formType === 'humedad' ? 'bg-fuchsia-500 text-white shadow-lg scale-105' : 'text-slate-400 hover:bg-slate-50'}`}> 
+                  <Droplets size={20} /> Humedad 
+                </button>
               </div>
             </div>
 
-            <div className={`rounded-xl shadow-md border overflow-hidden transition-colors ${formType === 'temperatura' ? 'bg-white border-blue-100' : 'bg-white border-purple-100'}`}>
-              <div className={`px-6 py-4 border-b flex justify-between items-center ${formType === 'temperatura' ? 'bg-blue-50 border-blue-100' : 'bg-purple-50 border-purple-100'}`}>
-                <h2 className={`text-lg font-bold flex items-center gap-2 ${formType === 'temperatura' ? 'text-blue-800' : 'text-purple-800'}`}>
-                  {formType === 'temperatura' ? <Thermometer /> : <Droplets />} 
-                  {formType === 'temperatura' ? 'Nuevo Registro de Temperatura' : 'Nuevo Registro de Humedad'}
-                </h2>
+            {/* TARJETA DEL FORMULARIO */}
+            <div className={`rounded-3xl shadow-xl overflow-hidden border-2 transition-all duration-300 bg-white ${formType === 'temperatura' ? 'border-cyan-100' : 'border-fuchsia-100'}`}>
+              
+              {/* Encabezado Colorido */}
+              <div className={`px-8 py-6 ${gradientHeader} text-white shadow-md relative overflow-hidden`}>
+                <div className="relative z-10">
+                  <h2 className="text-2xl font-black flex items-center gap-3 uppercase tracking-wide">
+                    {formType === 'temperatura' ? <Thermometer className="text-white/80" size={32}/> : <Droplets className="text-white/80" size={32}/>} 
+                    {formType === 'temperatura' ? 'Registro Térmico' : 'Humedad Relativa'}
+                  </h2>
+                  <p className="text-white/80 font-medium mt-1 pl-11 text-sm">
+                    Ingrese los datos del monitoreo diario para el control de calidad.
+                  </p>
+                </div>
+                {/* Decoración de fondo */}
+                <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
               </div>
 
-              <form onSubmit={handleSubmit} className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                  {/* Bloque 1 */}
-                  <div className="space-y-4">
-                    <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-1"><Calendar size={14}/> Fecha</label><input type="date" name="fecha" required value={formData.fecha} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" /></div>
-                    <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-1"><Clock size={14}/> Jornada</label><select name="jornada" value={formData.jornada} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">{JORNADAS.map(j => <option key={j} value={j}>{j}</option>)}</select></div>
+              <form onSubmit={handleSubmit} className="p-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+                  
+                  {/* Bloque 1: Contexto */}
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Fecha de Registro</label>
+                      <div className="relative group">
+                        <div className={`absolute left-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${formType === 'temperatura' ? 'bg-cyan-50 text-cyan-600 group-hover:bg-cyan-100' : 'bg-fuchsia-50 text-fuchsia-600 group-hover:bg-fuchsia-100'}`}>
+                          <Calendar size={16}/>
+                        </div>
+                        <input 
+                          type="date" 
+                          name="fecha" 
+                          required 
+                          value={formData.fecha} 
+                          onChange={handleInputChange} 
+                          className={`w-full pl-12 pr-4 py-3 border rounded-xl outline-none transition-all font-medium text-slate-700 bg-white ${formType === 'temperatura' ? 'focus:ring-cyan-100 border-slate-200 focus:border-cyan-300' : 'focus:ring-fuchsia-100 border-slate-200 focus:border-fuchsia-300'}`} 
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Jornada</label>
+                      <div className="relative group">
+                        <div className={`absolute left-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${formType === 'temperatura' ? 'bg-cyan-50 text-cyan-600 group-hover:bg-cyan-100' : 'bg-fuchsia-50 text-fuchsia-600 group-hover:bg-fuchsia-100'}`}>
+                          <Clock size={16}/>
+                        </div>
+                        <select name="jornada" value={formData.jornada} onChange={handleInputChange} className={`w-full pl-12 pr-4 py-3 border rounded-xl outline-none transition-all font-medium text-slate-700 bg-white appearance-none cursor-pointer ${formType === 'temperatura' ? 'focus:ring-cyan-100 border-slate-200 focus:border-cyan-300' : 'focus:ring-fuchsia-100 border-slate-200 focus:border-fuchsia-300'}`}>
+                          {JORNADAS.map(j => <option key={j} value={j}>{j}</option>)}
+                        </select>
+                      </div>
+                    </div>
                     
-                    {/* SELECCIÓN DE ÁREA + SUB-ÁREA si es Laboratorio */}
-                    <div className="space-y-2">
-                      <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-1"><Building2 size={14}/> Área</label><select name="area" value={formData.area} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none bg-white">{AREAS.map(a => <option key={a} value={a}>{a}</option>)}</select></div>
-                      
-                      {/* ✅ AQUÍ APARECE EL SELECTOR DE LABORATORIO */}
-                      {formData.area === 'LABORATORIO' && (
-                        <div className="animate-fade-in-down bg-blue-50 p-2 rounded-lg border border-blue-100">
-                          <label className="block text-xs font-bold text-blue-700 mb-1 flex items-center gap-1"><Microscope size={12}/> Punto de Control (Lab)</label>
-                          <select name="subArea" value={formData.subArea} onChange={handleInputChange} className="w-full border border-blue-300 rounded-md px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white text-blue-900 font-medium">
-                            {LAB_ZONES.map(z => <option key={z} value={z}>{z}</option>)}
+                    {/* SELECCIÓN DE ÁREA + SUB-ÁREA */}
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Área / Servicio</label>
+                        <div className="relative group">
+                          <div className={`absolute left-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${formType === 'temperatura' ? 'bg-cyan-50 text-cyan-600 group-hover:bg-cyan-100' : 'bg-fuchsia-50 text-fuchsia-600 group-hover:bg-fuchsia-100'}`}>
+                            <Building2 size={16}/>
+                          </div>
+                          <select name="area" value={formData.area} onChange={handleInputChange} className={`w-full pl-12 pr-4 py-3 border rounded-xl outline-none transition-all font-medium text-slate-700 bg-white appearance-none cursor-pointer ${formType === 'temperatura' ? 'focus:ring-cyan-100 border-slate-200 focus:border-cyan-300' : 'focus:ring-fuchsia-100 border-slate-200 focus:border-fuchsia-300'}`}>
+                            {AREAS.map(a => <option key={a} value={a}>{a}</option>)}
                           </select>
+                        </div>
+                      </div>
+                      
+                      {/* Sub-zona Laboratorio */}
+                      {formData.area === 'LABORATORIO' && (
+                        <div className="animate-fade-in-down">
+                          <label className={`block text-xs font-bold uppercase mb-2 ml-1 ${formType === 'temperatura' ? 'text-cyan-600' : 'text-fuchsia-600'}`}>Punto de Control (Lab)</label>
+                          <div className="relative">
+                            <div className={`absolute left-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full ${formType === 'temperatura' ? 'bg-cyan-100 text-cyan-700' : 'bg-fuchsia-100 text-fuchsia-700'}`}>
+                              <Microscope size={16}/>
+                            </div>
+                            <select name="subArea" value={formData.subArea} onChange={handleInputChange} className={`w-full pl-12 pr-4 py-3 border-2 rounded-xl outline-none transition-all font-bold text-slate-700 bg-white cursor-pointer ${formType === 'temperatura' ? 'border-cyan-100 focus:border-cyan-400' : 'border-fuchsia-100 focus:border-fuchsia-400'}`}>
+                              {LAB_ZONES.map(z => <option key={z} value={z}>{z}</option>)}
+                            </select>
+                          </div>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Bloque 2 */}
-                  <div className={`space-y-4 p-4 rounded-lg border ${formType === 'temperatura' ? 'bg-blue-50 border-blue-100' : 'bg-purple-50 border-purple-100'}`}>
+                  {/* Bloque 2: Mediciones (Destacado) */}
+                  <div className={`p-6 rounded-2xl border ${formType === 'temperatura' ? 'bg-cyan-50/50 border-cyan-100' : 'bg-fuchsia-50/50 border-fuchsia-100'} flex flex-col justify-center space-y-6`}>
                     {formType === 'temperatura' && (
                       <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div><label className="block text-xs font-bold text-slate-500 mb-1">Min (°C)</label><input type="number" step="0.1" name="tempMin" value={formData.tempMin} onChange={handleInputChange} className="w-full border border-slate-300 rounded px-2 py-1.5 focus:ring-blue-500"/></div>
-                          <div><label className="block text-xs font-bold text-slate-500 mb-1">Max (°C)</label><input type="number" step="0.1" name="tempMax" value={formData.tempMax} onChange={handleInputChange} className="w-full border border-slate-300 rounded px-2 py-1.5 focus:ring-blue-500"/></div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Mínima (°C)</label>
+                            <input type="number" step="0.1" name="tempMin" value={formData.tempMin} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-center font-semibold text-slate-600 focus:ring-2 focus:ring-cyan-200 outline-none"/>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Máxima (°C)</label>
+                            <input type="number" step="0.1" name="tempMax" value={formData.tempMax} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-center font-semibold text-slate-600 focus:ring-2 focus:ring-cyan-200 outline-none"/>
+                          </div>
                         </div>
-                        <div><label className="block text-sm font-bold text-slate-700 mb-1">Actual (°C)</label><div className="relative"><input type="number" step="0.1" name="tempActual" value={formData.tempActual} onChange={handleInputChange} className={`w-full border-2 rounded-lg px-3 py-2 text-lg font-bold outline-none ${isOutOfRange(formData.tempActual) ? 'border-red-400 text-red-700 bg-red-50' : 'border-blue-200 text-slate-700'}`} placeholder="Ej: 24.5"/><div className="absolute right-3 top-3">{formData.tempActual && (isOutOfRange(formData.tempActual) ? <AlertTriangle className="text-red-500" size={20} /> : <CheckCircle className="text-green-500" size={20} />)}</div></div>{isOutOfRange(formData.tempActual) && <p className="text-xs text-red-600 mt-1 font-bold animate-pulse">⚠️ ¡Fuera de rango!</p>}</div>
+                        <div>
+                          <label className="block text-xs font-bold text-cyan-700 uppercase mb-2 text-center">Temperatura Actual</label>
+                          <div className="relative">
+                            <input type="number" step="0.1" name="tempActual" value={formData.tempActual} onChange={handleInputChange} 
+                              className={`w-full border-2 rounded-2xl py-4 text-center text-3xl font-black outline-none transition-all shadow-sm ${isOutOfRange(formData.tempActual) ? 'border-red-300 text-red-600 bg-red-50' : 'border-cyan-200 text-slate-700 focus:border-cyan-400 focus:ring-4 focus:ring-cyan-100'}`} 
+                              placeholder="--.-"
+                            />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                              {formData.tempActual && (isOutOfRange(formData.tempActual) ? <AlertTriangle className="text-red-500 animate-bounce" size={24} /> : <CheckCircle className="text-green-500" size={24} />)}
+                            </div>
+                          </div>
+                          {isOutOfRange(formData.tempActual) && <p className="text-center text-xs text-red-500 font-bold mt-2 animate-pulse">⚠️ FUERA DE RANGO PERMITIDO</p>}
+                        </div>
                       </>
                     )}
+                    
                     {formType === 'humedad' && (
                       <>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div><label className="block text-xs font-bold text-slate-500 mb-1">Min (%)</label><input type="number" name="humMin" value={formData.humMin} onChange={handleInputChange} className="w-full border border-slate-300 rounded px-2 py-1.5 focus:ring-purple-500"/></div>
-                          <div><label className="block text-xs font-bold text-slate-500 mb-1">Max (%)</label><input type="number" name="humMax" value={formData.humMax} onChange={handleInputChange} className="w-full border border-slate-300 rounded px-2 py-1.5 focus:ring-purple-500"/></div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Mínima (%)</label>
+                            <input type="number" name="humMin" value={formData.humMin} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-center font-semibold text-slate-600 focus:ring-2 focus:ring-fuchsia-200 outline-none"/>
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Máxima (%)</label>
+                            <input type="number" name="humMax" value={formData.humMax} onChange={handleInputChange} className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-center font-semibold text-slate-600 focus:ring-2 focus:ring-fuchsia-200 outline-none"/>
+                          </div>
                         </div>
-                        <div><label className="block text-sm font-bold text-slate-700 mb-1">Actual (%)</label><div className="relative"><input type="number" name="humActual" value={formData.humActual} onChange={handleInputChange} className={`w-full border-2 rounded-lg px-3 py-2 text-lg font-bold outline-none ${isHumidityOutOfRange(formData.humActual) ? 'border-red-400 text-red-700 bg-red-50' : 'border-purple-200 text-purple-700'}`} placeholder="Ej: 60"/><div className="absolute right-3 top-3">{formData.humActual && (isHumidityOutOfRange(formData.humActual) ? <AlertTriangle className="text-red-500" size={20} /> : <CheckCircle className="text-green-500" size={20} />)}</div></div>{isHumidityOutOfRange(formData.humActual) && <p className="text-xs text-red-600 mt-1 font-bold animate-pulse">⚠️ ¡Fuera de rango!</p>}</div>
+                        <div>
+                          <label className="block text-xs font-bold text-fuchsia-700 uppercase mb-2 text-center">Humedad Actual</label>
+                          <div className="relative">
+                            <input type="number" name="humActual" value={formData.humActual} onChange={handleInputChange} 
+                              className={`w-full border-2 rounded-2xl py-4 text-center text-3xl font-black outline-none transition-all shadow-sm ${isHumidityOutOfRange(formData.humActual) ? 'border-red-300 text-red-600 bg-red-50' : 'border-fuchsia-200 text-slate-700 focus:border-fuchsia-400 focus:ring-4 focus:ring-fuchsia-100'}`} 
+                              placeholder="--"
+                            />
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                              {formData.humActual && (isHumidityOutOfRange(formData.humActual) ? <AlertTriangle className="text-red-500 animate-bounce" size={24} /> : <CheckCircle className="text-green-500" size={24} />)}
+                            </div>
+                          </div>
+                          {isHumidityOutOfRange(formData.humActual) && <p className="text-center text-xs text-red-500 font-bold mt-2 animate-pulse">⚠️ FUERA DE RANGO PERMITIDO</p>}
+                        </div>
                       </>
                     )}
                   </div>
 
-                  {/* Bloque 3 */}
-                  <div className="space-y-4">
-                    <div><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-1"><User size={14}/> Registrado Por</label><input type="text" name="registradoPor" required value={formData.registradoPor} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Nombre..."/></div>
-                    <div className="h-full"><label className="block text-sm font-bold text-slate-700 mb-1 flex items-center gap-1"><FileText size={14}/> Observaciones</label><textarea name="observaciones" value={formData.observaciones} onChange={handleInputChange} className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none h-32 resize-none" placeholder="Novedades..."></textarea></div>
+                  {/* Bloque 3: Responsable y Observaciones */}
+                  <div className="space-y-6">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Responsable</label>
+                      <div className="relative group">
+                        <div className={`absolute left-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full transition-colors ${formType === 'temperatura' ? 'bg-cyan-50 text-cyan-600 group-hover:bg-cyan-100' : 'bg-fuchsia-50 text-fuchsia-600 group-hover:bg-fuchsia-100'}`}>
+                          <User size={16}/>
+                        </div>
+                        <input type="text" name="registradoPor" required value={formData.registradoPor} onChange={handleInputChange} className={`w-full pl-12 pr-4 py-3 border rounded-xl outline-none transition-all font-medium text-slate-700 ${formType === 'temperatura' ? 'focus:ring-cyan-100 border-slate-200 focus:border-cyan-300' : 'focus:ring-fuchsia-100 border-slate-200 focus:border-fuchsia-300'}`} placeholder="Nombre Completo" />
+                      </div>
+                    </div>
+                    <div className="h-full">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1">Observaciones</label>
+                      <div className="relative h-32 group">
+                        <div className={`absolute left-3 top-3 p-1.5 rounded-full transition-colors ${formType === 'temperatura' ? 'bg-cyan-50 text-cyan-600 group-hover:bg-cyan-100' : 'bg-fuchsia-50 text-fuchsia-600 group-hover:bg-fuchsia-100'}`}>
+                          <FileText size={16}/>
+                        </div>
+                        <textarea name="observaciones" value={formData.observaciones} onChange={handleInputChange} className={`w-full h-full pl-12 pr-4 py-3 border rounded-xl outline-none transition-all font-medium text-slate-700 resize-none ${formType === 'temperatura' ? 'focus:ring-cyan-100 border-slate-200 focus:border-cyan-300' : 'focus:ring-fuchsia-100 border-slate-200 focus:border-fuchsia-300'}`} placeholder="Sin novedades..."></textarea>
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-4 border-t border-slate-100">
-                  <button type="submit" className={`font-bold py-3 px-8 rounded-lg shadow-md transition-transform active:scale-95 flex items-center gap-2 text-white ${formType === 'temperatura' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-purple-600 hover:bg-purple-700'}`}>
-                    <Save size={20} /> {isSaving ? 'Guardando...' : 'Guardar en Sheets'}
+                <div className="flex justify-end pt-6 border-t border-slate-100">
+                  <button type="submit" className={`font-black py-4 px-10 rounded-xl shadow-xl transition-transform active:scale-95 flex items-center gap-3 text-white text-lg ${formType === 'temperatura' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700' : 'bg-gradient-to-r from-fuchsia-500 to-purple-600 hover:from-fuchsia-600 hover:to-purple-700'}`}>
+                    <Save size={24} /> {isSaving ? 'Guardando...' : 'GUARDAR REGISTRO'}
                   </button>
                 </div>
               </form>
