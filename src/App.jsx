@@ -53,7 +53,7 @@ export default function App() {
   const [selectedAreaStats, setSelectedAreaStats] = useState(AREAS[0]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
-  const [selectedJornadaStats, setSelectedJornadaStats] = useState('Todas'); // ✅ Filtro de Jornada
+  const [selectedJornadaStats, setSelectedJornadaStats] = useState('Todas'); 
 
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
@@ -106,15 +106,22 @@ export default function App() {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  // Ayuda a convertir "24,5" a 24.5 para que las gráficas no fallen
+  const parseNum = (val) => {
+    if (!val) return null;
+    if (typeof val === 'number') return val;
+    return parseFloat(val.toString().replace(',', '.'));
+  };
+
   const isOutOfRange = (val) => {
     if (!val) return false;
-    const num = parseFloat(val);
+    const num = parseNum(val);
     return num < 15 || num > 30;
   };
 
   const isHumidityOutOfRange = (val) => {
     if (!val) return false;
-    const num = parseFloat(val);
+    const num = parseNum(val);
     return num < 35 || num > 70;
   };
 
@@ -178,7 +185,6 @@ export default function App() {
   const getFilteredRecords = () => {
     return records.filter(r => {
       const recordDate = new Date(r.fecha + 'T00:00:00'); 
-      // ✅ LOGICA DE FILTRO: Si es "Todas", pasa. Si no, debe coincidir.
       const matchesJornada = selectedJornadaStats === 'Todas' || r.jornada === selectedJornadaStats;
       
       return (
@@ -197,7 +203,6 @@ export default function App() {
 
     sortedRecords.forEach(r => {
       const day = r.fecha.split('-')[2];
-      // Si elegimos "Todas", diferenciamos en la gráfica. Si es una específica, solo mostramos el día.
       const key = selectedJornadaStats === 'Todas' ? `${day}-${r.jornada}` : `${day}`;
       
       if (!grouped[key]) {
@@ -209,17 +214,28 @@ export default function App() {
           humMin: null, humActual: null, humMax: null
         };
       }
+      
       const type = r.type ? r.type.toLowerCase() : 'temperatura';
+      
       if (type === 'temperatura') {
-        if (r.tempActual) grouped[key].tempActual = parseFloat(r.tempActual);
-        if (r.tempMin) grouped[key].tempMin = parseFloat(r.tempMin);
-        if (r.tempMax) grouped[key].tempMax = parseFloat(r.tempMax);
+        // ✅ CORRECCIÓN: Buscamos varios nombres posibles para que no falle
+        const actual = r.tempActual || r.temperatura || r.temp;
+        const min = r.tempMin || r.min;
+        const max = r.tempMax || r.max;
+
+        if (actual) grouped[key].tempActual = parseNum(actual);
+        if (min) grouped[key].tempMin = parseNum(min);
+        if (max) grouped[key].tempMax = parseNum(max);
       }
+      
       if (type === 'humedad') {
         const val = r.humActual || r.humedad; 
-        if (val) grouped[key].humActual = parseFloat(val);
-        if (r.humMin) grouped[key].humMin = parseFloat(r.humMin);
-        if (r.humMax) grouped[key].humMax = parseFloat(r.humMax);
+        const min = r.humMin;
+        const max = r.humMax;
+
+        if (val) grouped[key].humActual = parseNum(val);
+        if (min) grouped[key].humMin = parseNum(min);
+        if (max) grouped[key].humMax = parseNum(max);
       }
     });
     return Object.values(grouped);
@@ -378,7 +394,7 @@ export default function App() {
                   <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
                     <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-black"><Thermometer className="text-blue-500 print:text-black" /> Temperatura (°C)</h3></div>
                     <div className="h-64 w-full">
-                      {chartData.length > 0 ? (
+                      {chartData.some(d => d.tempActual) ? (
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
@@ -432,8 +448,8 @@ export default function App() {
                   <div className="bg-white p-5 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
                       <h4 className="text-sm font-bold text-slate-500 uppercase mb-4 print:text-black">Estadísticas</h4>
                       <div className="space-y-4">
-                        <div className="flex justify-between items-end border-b pb-2"><span className="text-slate-600 flex items-center gap-2"><Thermometer size={14}/> Prom. Temp</span><span className="text-xl font-bold text-blue-700 print:text-black">{(() => { const records = getFilteredRecords(); const temps = records.filter(r => r.tempActual).map(r => parseFloat(r.tempActual)); return temps.length ? (temps.reduce((a,b)=>a+b,0)/temps.length).toFixed(1) + '°C' : '--'; })()}</span></div>
-                        <div className="flex justify-between items-end border-b pb-2"><span className="text-slate-600 flex items-center gap-2"><Droplets size={14}/> Prom. Hum</span><span className="text-xl font-bold text-purple-700 print:text-black">{(() => { const records = getFilteredRecords(); const hums = records.filter(r => (r.humActual || r.humedad)).map(r => parseFloat(r.humActual || r.humedad)); return hums.length ? (hums.reduce((a,b)=>a+b,0)/hums.length).toFixed(1) + '%' : '--'; })()}</span></div>
+                        <div className="flex justify-between items-end border-b pb-2"><span className="text-slate-600 flex items-center gap-2"><Thermometer size={14}/> Prom. Temp</span><span className="text-xl font-bold text-blue-700 print:text-black">{(() => { const records = getFilteredRecords(); const temps = records.filter(r => r.tempActual).map(r => parseNum(r.tempActual)); return temps.length ? (temps.reduce((a,b)=>a+b,0)/temps.length).toFixed(1) + '°C' : '--'; })()}</span></div>
+                        <div className="flex justify-between items-end border-b pb-2"><span className="text-slate-600 flex items-center gap-2"><Droplets size={14}/> Prom. Hum</span><span className="text-xl font-bold text-purple-700 print:text-black">{(() => { const records = getFilteredRecords(); const hums = records.filter(r => (r.humActual || r.humedad)).map(r => parseNum(r.humActual || r.humedad)); return hums.length ? (hums.reduce((a,b)=>a+b,0)/hums.length).toFixed(1) + '%' : '--'; })()}</span></div>
                       </div>
                   </div>
                 </div>
