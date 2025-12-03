@@ -64,7 +64,7 @@ export default function App() {
     registradoPor: '', observaciones: ''
   });
 
-  // --- AYUDA PARA NÚMEROS (Convierte "24,5" a 24.5) ---
+  // --- AYUDA PARA NÚMEROS ---
   const parseNum = (val) => {
     if (val === null || val === undefined || val === '') return null;
     if (typeof val === 'number') return val;
@@ -73,7 +73,7 @@ export default function App() {
     return isNaN(num) ? null : num;
   };
 
-  // --- CARGA DE DATOS (LECTURA INTELIGENTE "TODO TERRENO") ---
+  // --- CARGA DE DATOS ---
   const fetchSheetData = async () => {
     if (!GOOGLE_SHEETS_WEBHOOK_URL) return;
     setLoading(true);
@@ -83,26 +83,33 @@ export default function App() {
       
       if (Array.isArray(data)) {
         const processed = data.map((item, index) => {
-          // 1. Normalizar claves: Convertimos todas las llaves a minúsculas
-          // Esto hace que 'Tipo', 'tipo', 'TIPO' funcionen igual.
+          // 1. Normalizar claves: Convertimos a minúsculas y QUITAMOS ESPACIOS
           const normalizedItem = {};
           Object.keys(item).forEach(key => {
-            normalizedItem[key.toLowerCase()] = item[key];
+            normalizedItem[key.trim().toLowerCase()] = item[key];
           });
 
-          // 2. Detectar Tipo (Buscamos en columna 'tipo' o fallback 'type')
-          // Se usa includes para ser flexible (ej: "Temperatura" o "Registro Temperatura")
+          // 2. Detectar Tipo con seguridad
           const rawType = normalizedItem['tipo'] || normalizedItem['type'] || 'temperatura';
           const type = rawType.toString().toLowerCase();
           
-          // 3. Leer Valores buscando variantes comunes (con y sin tilde)
+          // 3. Leer Valores (Buscamos todas las variantes posibles de 'Mínima')
           const valActual = parseNum(normalizedItem['actual']);
-          const valMin = parseNum(normalizedItem['mínima'] || normalizedItem['minima'] || normalizedItem['min']);
-          const valMax = parseNum(normalizedItem['máxima'] || normalizedItem['maxima'] || normalizedItem['max']);
+          const valMin = parseNum(
+            normalizedItem['mínima'] || 
+            normalizedItem['minima'] || 
+            normalizedItem['min'] ||
+            normalizedItem['mÃnima'] // Por si acaso la codificación falló
+          );
+          const valMax = parseNum(
+            normalizedItem['máxima'] || 
+            normalizedItem['maxima'] || 
+            normalizedItem['max'] ||
+            normalizedItem['mÃ¡xima']
+          );
 
           return {
             id: index,
-            // Mapeo seguro usando las claves normalizadas
             fecha: normalizedItem['fecha'],
             hora: normalizedItem['hora registro'] || normalizedItem['hora'],
             jornada: normalizedItem['jornada'],
@@ -111,7 +118,7 @@ export default function App() {
             observaciones: normalizedItem['observaciones'],
             type: type,
             
-            // 4. Asignación estricta: Si es temp, SOLO llena temp. Si es hum, SOLO llena hum.
+            // Asignación estricta
             tempActual: type.includes('temp') ? valActual : null,
             tempMin: type.includes('temp') ? valMin : null,
             tempMax: type.includes('temp') ? valMax : null,
@@ -122,7 +129,6 @@ export default function App() {
           };
         });
 
-        // Ordenar: fecha más reciente primero
         processed.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
         setRecords(processed);
       }
@@ -171,7 +177,6 @@ export default function App() {
 
     const newRecord = {
       ...formData,
-      // ✅ CORRECCIÓN AQUÍ: Enviamos 'Temperatura' o 'Humedad' (Con Mayúscula)
       type: formType === 'temperatura' ? 'Temperatura' : 'Humedad', 
       tempMin: formType === 'temperatura' ? formData.tempMin : '',
       tempActual: formType === 'temperatura' ? formData.tempActual : '',
@@ -206,7 +211,6 @@ export default function App() {
     const csvContent = [
       headers.join(","),
       ...filteredRecords.map(r => [
-        // Convertimos a mayúscula también para el CSV
         r.type === 'temperatura' ? 'Temperatura' : (r.type === 'humedad' ? 'Humedad' : r.type),
         r.fecha, 
         r.hora || '-', 
@@ -288,11 +292,9 @@ export default function App() {
   const currentYear = new Date().getFullYear();
   const years = Array.from({length: 5}, (_, i) => currentYear - i);
 
-  // --- CÁLCULO DE PROMEDIOS (Lógica separada y protegida) ---
   const calculateAverage = (field) => {
     const validRecords = getFilteredRecords().filter(r => r[field] !== null && r[field] !== undefined);
     if (validRecords.length === 0) return '--';
-    
     const sum = validRecords.reduce((acc, curr) => acc + (parseFloat(curr[field]) || 0), 0);
     return (sum / validRecords.length).toFixed(1);
   };
@@ -446,12 +448,13 @@ export default function App() {
                   <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
                     <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-black"><Thermometer className="text-blue-500 print:text-black" /> Temperatura (°C)</h3></div>
                     <div className="h-64 w-full">
-                      {chartData.length > 0 ? (
+                      {chartData.some(d => d.tempActual !== null) ? (
                         <ResponsiveContainer width="100%" height="100%">
+                          {/* YAxis domain en 'auto' permite ver puntos que estén fuera de 10-35 */}
                           <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
                             <XAxis dataKey="name" tick={{fontSize: 10}} interval={0} angle={-45} textAnchor="end" height={50}/>
-                            <YAxis domain={[10, 35]} />
+                            <YAxis domain={['auto', 'auto']} />
                             <Tooltip />
                             <Legend />
                             {/* LÍNEAS DE RANGO (Amarillas) */}
@@ -464,7 +467,7 @@ export default function App() {
                             <Line type="monotone" dataKey="tempMax" stroke="red" name="Max Reg." dot={false} strokeWidth={2} />
                           </LineChart>
                         </ResponsiveContainer>
-                      ) : <div className="h-full flex items-center justify-center text-slate-400">Sin datos</div>}
+                      ) : <div className="h-full flex items-center justify-center text-slate-400">Sin datos de Temperatura</div>}
                     </div>
                   </div>
 
@@ -472,7 +475,7 @@ export default function App() {
                   <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
                     <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-black"><Droplets className="text-purple-500 print:text-black" /> Humedad (%)</h3></div>
                     <div className="h-64 w-full">
-                      {chartData.some(d => d.humActual) ? (
+                      {chartData.some(d => d.humActual !== null) ? (
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
@@ -490,7 +493,7 @@ export default function App() {
                             <Line type="monotone" dataKey="humMax" stroke="red" name="Max Reg." dot={false} strokeWidth={2} />
                           </LineChart>
                         </ResponsiveContainer>
-                      ) : <div className="h-full flex items-center justify-center text-slate-400">Sin datos</div>}
+                      ) : <div className="h-full flex items-center justify-center text-slate-400">Sin datos de Humedad</div>}
                     </div>
                   </div>
 
