@@ -68,13 +68,12 @@ export default function App() {
   const parseNum = (val) => {
     if (val === null || val === undefined || val === '') return null;
     if (typeof val === 'number') return val;
-    // Reemplaza coma por punto si viene como texto
     const cleanVal = val.toString().replace(',', '.');
     const num = parseFloat(cleanVal);
     return isNaN(num) ? null : num;
   };
 
-  // --- CARGA DE DATOS (LECTURA INTELIGENTE) ---
+  // --- CARGA DE DATOS (LECTURA INTELIGENTE "TODO TERRENO") ---
   const fetchSheetData = async () => {
     if (!GOOGLE_SHEETS_WEBHOOK_URL) return;
     setLoading(true);
@@ -84,28 +83,35 @@ export default function App() {
       
       if (Array.isArray(data)) {
         const processed = data.map((item, index) => {
-          // 1. Detectar Tipo (Buscamos en columna 'Tipo' o fallback 'type')
-          const rawType = item['Tipo'] || item['type'] || 'temperatura';
-          const type = rawType.toLowerCase();
+          // 1. Normalizar claves: Convertimos todas las llaves a minúsculas
+          // Esto hace que 'Tipo', 'tipo', 'TIPO' funcionen igual.
+          const normalizedItem = {};
+          Object.keys(item).forEach(key => {
+            normalizedItem[key.toLowerCase()] = item[key];
+          });
+
+          // 2. Detectar Tipo (Buscamos en columna 'tipo' o fallback 'type')
+          // Se usa includes para ser flexible (ej: "Temperatura" o "Registro Temperatura")
+          const rawType = normalizedItem['tipo'] || normalizedItem['type'] || 'temperatura';
+          const type = rawType.toString().toLowerCase();
           
-          // 2. Leer Valores de tus Columnas Específicas
-          // Nota: Usamos item['Nombre Exacto'] que viene del JSON de Google
-          const valActual = parseNum(item['Actual']);
-          const valMin = parseNum(item['Mínima']); // Ojo con la tilde
-          const valMax = parseNum(item['Maxima']); // Sin tilde según tu indicación
+          // 3. Leer Valores buscando variantes comunes (con y sin tilde)
+          const valActual = parseNum(normalizedItem['actual']);
+          const valMin = parseNum(normalizedItem['mínima'] || normalizedItem['minima'] || normalizedItem['min']);
+          const valMax = parseNum(normalizedItem['máxima'] || normalizedItem['maxima'] || normalizedItem['max']);
 
           return {
             id: index,
-            // Mapeo de columnas de texto
-            fecha: item['Fecha'],
-            hora: item['Hora Registro'],
-            jornada: item['Jornada'],
-            area: item['Area'],
-            registradoPor: item['Responsable'],
-            observaciones: item['Observaciones'],
+            // Mapeo seguro usando las claves normalizadas
+            fecha: normalizedItem['fecha'],
+            hora: normalizedItem['hora registro'] || normalizedItem['hora'],
+            jornada: normalizedItem['jornada'],
+            area: normalizedItem['area'],
+            registradoPor: normalizedItem['responsable'] || normalizedItem['registradopor'],
+            observaciones: normalizedItem['observaciones'],
             type: type,
             
-            // 3. Asignación lógica según si es Temp o Humedad
+            // 4. Asignación estricta: Si es temp, SOLO llena temp. Si es hum, SOLO llena hum.
             tempActual: type.includes('temp') ? valActual : null,
             tempMin: type.includes('temp') ? valMin : null,
             tempMax: type.includes('temp') ? valMax : null,
@@ -195,7 +201,6 @@ export default function App() {
 
   const exportToCSV = () => {
     const filteredRecords = getFilteredRecords();
-    // Headers del CSV alineados con lo que ve el usuario
     const headers = ["Tipo", "Fecha", "Hora", "Area", "Jornada", "T. Min", "T. Act", "T. Max", "H. Min", "H. Act", "H. Max", "Resp", "Obs"];
     const csvContent = [
       headers.join(","),
@@ -221,14 +226,13 @@ export default function App() {
 
   const getFilteredRecords = () => {
     return records.filter(r => {
-      // Filtro de fecha robusto
       if (!r.fecha) return false;
-      const dateStr = r.fecha.toString().split('T')[0]; // YYYY-MM-DD
+      const dateStr = r.fecha.toString().split('T')[0]; 
       const dateParts = dateStr.split('-');
       if(dateParts.length < 3) return false;
 
       const recordYear = parseInt(dateParts[0]);
-      const recordMonth = parseInt(dateParts[1]) - 1; // Meses 0-11
+      const recordMonth = parseInt(dateParts[1]) - 1; 
 
       const matchesJornada = selectedJornadaStats === 'Todas' || r.jornada === selectedJornadaStats;
       
@@ -244,7 +248,6 @@ export default function App() {
   const getChartData = () => {
     const areaRecords = getFilteredRecords();
     const grouped = {};
-    // Ordenar cronológicamente para la gráfica (antiguo a nuevo)
     const sortedRecords = [...areaRecords].sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
 
     sortedRecords.forEach(r => {
@@ -252,7 +255,6 @@ export default function App() {
       const dateStr = r.fecha.toString().split('T')[0];
       const day = dateStr.split('-')[2];
       
-      // Llave de agrupación
       const key = selectedJornadaStats === 'Todas' ? `${day}-${r.jornada}` : `${day}`;
       
       if (!grouped[key]) {
@@ -283,6 +285,15 @@ export default function App() {
   const chartData = getChartData();
   const currentYear = new Date().getFullYear();
   const years = Array.from({length: 5}, (_, i) => currentYear - i);
+
+  // --- CÁLCULO DE PROMEDIOS (Lógica separada y protegida) ---
+  const calculateAverage = (field) => {
+    const validRecords = getFilteredRecords().filter(r => r[field] !== null && r[field] !== undefined);
+    if (validRecords.length === 0) return '--';
+    
+    const sum = validRecords.reduce((acc, curr) => acc + (parseFloat(curr[field]) || 0), 0);
+    return (sum / validRecords.length).toFixed(1);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
@@ -433,7 +444,7 @@ export default function App() {
                   <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
                     <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-black"><Thermometer className="text-blue-500 print:text-black" /> Temperatura (°C)</h3></div>
                     <div className="h-64 w-full">
-                      {chartData.length > 0 ? (
+                      {chartData.some(d => d.tempActual) ? (
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
@@ -487,8 +498,8 @@ export default function App() {
                   <div className="bg-white p-5 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
                       <h4 className="text-sm font-bold text-slate-500 uppercase mb-4 print:text-black">Estadísticas</h4>
                       <div className="space-y-4">
-                        <div className="flex justify-between items-end border-b pb-2"><span className="text-slate-600 flex items-center gap-2"><Thermometer size={14}/> Prom. Temp</span><span className="text-xl font-bold text-blue-700 print:text-black">{(() => { const records = getFilteredRecords(); const temps = records.filter(r => r.tempActual).map(r => parseNum(r.tempActual)); return temps.length ? (temps.reduce((a,b)=>a+b,0)/temps.length).toFixed(1) + '°C' : '--'; })()}</span></div>
-                        <div className="flex justify-between items-end border-b pb-2"><span className="text-slate-600 flex items-center gap-2"><Droplets size={14}/> Prom. Hum</span><span className="text-xl font-bold text-purple-700 print:text-black">{(() => { const records = getFilteredRecords(); const hums = records.filter(r => (r.humActual || r.humedad)).map(r => parseNum(r.humActual || r.humedad)); return hums.length ? (hums.reduce((a,b)=>a+b,0)/hums.length).toFixed(1) + '%' : '--'; })()}</span></div>
+                        <div className="flex justify-between items-end border-b pb-2"><span className="text-slate-600 flex items-center gap-2"><Thermometer size={14}/> Prom. Temp</span><span className="text-xl font-bold text-blue-700 print:text-black">{calculateAverage('tempActual') + '°C'}</span></div>
+                        <div className="flex justify-between items-end border-b pb-2"><span className="text-slate-600 flex items-center gap-2"><Droplets size={14}/> Prom. Hum</span><span className="text-xl font-bold text-purple-700 print:text-black">{calculateAverage('humActual') + '%'}</span></div>
                       </div>
                   </div>
                 </div>
