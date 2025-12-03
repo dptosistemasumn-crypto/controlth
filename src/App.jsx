@@ -25,7 +25,7 @@ import {
   Tooltip, 
   Legend, 
   ResponsiveContainer,
-  ReferenceLine // ✅ Importamos ReferenceLine para las líneas amarillas
+  ReferenceLine
 } from 'recharts';
 
 // --- CONFIGURACIÓN ---
@@ -52,7 +52,8 @@ export default function App() {
   // Filtros
   const [selectedAreaStats, setSelectedAreaStats] = useState(AREAS[0]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth()); 
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  const [selectedJornadaStats, setSelectedJornadaStats] = useState('Todas'); // ✅ Filtro de Jornada
 
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
@@ -177,10 +178,14 @@ export default function App() {
   const getFilteredRecords = () => {
     return records.filter(r => {
       const recordDate = new Date(r.fecha + 'T00:00:00'); 
+      // ✅ LOGICA DE FILTRO: Si es "Todas", pasa. Si no, debe coincidir.
+      const matchesJornada = selectedJornadaStats === 'Todas' || r.jornada === selectedJornadaStats;
+      
       return (
         r.area === selectedAreaStats &&
         recordDate.getFullYear() === parseInt(selectedYear) &&
-        recordDate.getMonth() === parseInt(selectedMonth)
+        recordDate.getMonth() === parseInt(selectedMonth) &&
+        matchesJornada 
       );
     });
   };
@@ -192,10 +197,12 @@ export default function App() {
 
     sortedRecords.forEach(r => {
       const day = r.fecha.split('-')[2];
-      const key = `${day}-${r.jornada}`;
+      // Si elegimos "Todas", diferenciamos en la gráfica. Si es una específica, solo mostramos el día.
+      const key = selectedJornadaStats === 'Todas' ? `${day}-${r.jornada}` : `${day}`;
+      
       if (!grouped[key]) {
         grouped[key] = { 
-          name: `${day} (${r.jornada ? r.jornada.substring(0,1) : '-'})`,
+          name: selectedJornadaStats === 'Todas' ? `${day} (${r.jornada ? r.jornada.substring(0,1) : '-'})` : `${day}`,
           fecha: r.fecha, 
           jornada: r.jornada, 
           tempMin: null, tempActual: null, tempMax: null,
@@ -265,6 +272,7 @@ export default function App() {
           </div>
           <div className="text-right text-sm text-slate-500">
              <p><strong>Área:</strong> {selectedAreaStats}</p>
+             <p><strong>Jornada:</strong> {selectedJornadaStats}</p>
              <p><strong>Periodo:</strong> {MONTHS[selectedMonth]} {selectedYear}</p>
              <p>Generado: {new Date().toLocaleDateString()}</p>
           </div>
@@ -346,6 +354,7 @@ export default function App() {
             <div className="bg-white p-4 rounded-lg shadow-sm border border-slate-200 flex flex-col lg:flex-row justify-between items-end lg:items-center gap-4 print:hidden">
               <div className="flex flex-col md:flex-row gap-4 w-full">
                 <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área</label><select value={selectedAreaStats} onChange={(e) => setSelectedAreaStats(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">{AREAS.map(a => <option key={a} value={a}>{a}</option>)}</select></div>
+                <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Jornada</label><select value={selectedJornadaStats} onChange={(e) => setSelectedJornadaStats(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="Todas">Todas</option>{JORNADAS.map(j => <option key={j} value={j}>{j}</option>)}</select></div>
                 <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Mes</label><select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">{MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}</select></div>
                 <div className="w-32"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Año</label><select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">{years.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
               </div>
