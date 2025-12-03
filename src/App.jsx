@@ -171,7 +171,8 @@ export default function App() {
 
     const newRecord = {
       ...formData,
-      type: formType,
+      // ✅ CORRECCIÓN AQUÍ: Enviamos 'Temperatura' o 'Humedad' (Con Mayúscula)
+      type: formType === 'temperatura' ? 'Temperatura' : 'Humedad', 
       tempMin: formType === 'temperatura' ? formData.tempMin : '',
       tempActual: formType === 'temperatura' ? formData.tempActual : '',
       tempMax: formType === 'temperatura' ? formData.tempMax : '',
@@ -205,7 +206,8 @@ export default function App() {
     const csvContent = [
       headers.join(","),
       ...filteredRecords.map(r => [
-        r.type || 'mixto', 
+        // Convertimos a mayúscula también para el CSV
+        r.type === 'temperatura' ? 'Temperatura' : (r.type === 'humedad' ? 'Humedad' : r.type),
         r.fecha, 
         r.hora || '-', 
         r.area, 
@@ -444,7 +446,7 @@ export default function App() {
                   <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
                     <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-black"><Thermometer className="text-blue-500 print:text-black" /> Temperatura (°C)</h3></div>
                     <div className="h-64 w-full">
-                      {chartData.some(d => d.tempActual) ? (
+                      {chartData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
