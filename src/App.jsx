@@ -64,7 +64,17 @@ export default function App() {
     registradoPor: '', observaciones: ''
   });
 
-  // --- CARGA DE DATOS ---
+  // --- AYUDA PARA NÚMEROS (Convierte "24,5" a 24.5) ---
+  const parseNum = (val) => {
+    if (val === null || val === undefined || val === '') return null;
+    if (typeof val === 'number') return val;
+    // Reemplaza coma por punto si viene como texto
+    const cleanVal = val.toString().replace(',', '.');
+    const num = parseFloat(cleanVal);
+    return isNaN(num) ? null : num;
+  };
+
+  // --- CARGA DE DATOS (LECTURA INTELIGENTE) ---
   const fetchSheetData = async () => {
     if (!GOOGLE_SHEETS_WEBHOOK_URL) return;
     setLoading(true);
@@ -73,11 +83,40 @@ export default function App() {
       const data = await response.json();
       
       if (Array.isArray(data)) {
-        const processed = data.map((item, index) => ({
-          ...item,
-          id: index, 
-          timestamp: item.fecha + ' ' + item.hora 
-        }));
+        const processed = data.map((item, index) => {
+          // 1. Detectar Tipo (Buscamos en columna 'Tipo' o fallback 'type')
+          const rawType = item['Tipo'] || item['type'] || 'temperatura';
+          const type = rawType.toLowerCase();
+          
+          // 2. Leer Valores de tus Columnas Específicas
+          // Nota: Usamos item['Nombre Exacto'] que viene del JSON de Google
+          const valActual = parseNum(item['Actual']);
+          const valMin = parseNum(item['Mínima']); // Ojo con la tilde
+          const valMax = parseNum(item['Maxima']); // Sin tilde según tu indicación
+
+          return {
+            id: index,
+            // Mapeo de columnas de texto
+            fecha: item['Fecha'],
+            hora: item['Hora Registro'],
+            jornada: item['Jornada'],
+            area: item['Area'],
+            registradoPor: item['Responsable'],
+            observaciones: item['Observaciones'],
+            type: type,
+            
+            // 3. Asignación lógica según si es Temp o Humedad
+            tempActual: type.includes('temp') ? valActual : null,
+            tempMin: type.includes('temp') ? valMin : null,
+            tempMax: type.includes('temp') ? valMax : null,
+            
+            humActual: type.includes('hum') ? valActual : null,
+            humMin: type.includes('hum') ? valMin : null,
+            humMax: type.includes('hum') ? valMax : null,
+          };
+        });
+
+        // Ordenar: fecha más reciente primero
         processed.sort((a,b) => new Date(b.fecha) - new Date(a.fecha));
         setRecords(processed);
       }
@@ -100,17 +139,10 @@ export default function App() {
     };
   }, []);
 
-  // --- LÓGICA ---
+  // --- LÓGICA DE FORMULARIO ---
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Ayuda a convertir "24,5" a 24.5 para que las gráficas no fallen
-  const parseNum = (val) => {
-    if (!val) return null;
-    if (typeof val === 'number') return val;
-    return parseFloat(val.toString().replace(',', '.'));
   };
 
   const isOutOfRange = (val) => {
@@ -163,11 +195,16 @@ export default function App() {
 
   const exportToCSV = () => {
     const filteredRecords = getFilteredRecords();
+    // Headers del CSV alineados con lo que ve el usuario
     const headers = ["Tipo", "Fecha", "Hora", "Area", "Jornada", "T. Min", "T. Act", "T. Max", "H. Min", "H. Act", "H. Max", "Resp", "Obs"];
     const csvContent = [
       headers.join(","),
       ...filteredRecords.map(r => [
-        r.type || 'mixto', r.fecha, r.hora || '-', r.area, r.jornada,
+        r.type || 'mixto', 
+        r.fecha, 
+        r.hora || '-', 
+        r.area, 
+        r.jornada,
         r.tempMin || '-', r.tempActual || '-', r.tempMax || '-',
         r.humMin || '-', r.humActual || '-', r.humMax || '-',
         r.registradoPor, `"${r.observaciones || ''}"`
@@ -184,13 +221,21 @@ export default function App() {
 
   const getFilteredRecords = () => {
     return records.filter(r => {
-      const recordDate = new Date(r.fecha + 'T00:00:00'); 
+      // Filtro de fecha robusto
+      if (!r.fecha) return false;
+      const dateStr = r.fecha.toString().split('T')[0]; // YYYY-MM-DD
+      const dateParts = dateStr.split('-');
+      if(dateParts.length < 3) return false;
+
+      const recordYear = parseInt(dateParts[0]);
+      const recordMonth = parseInt(dateParts[1]) - 1; // Meses 0-11
+
       const matchesJornada = selectedJornadaStats === 'Todas' || r.jornada === selectedJornadaStats;
       
       return (
         r.area === selectedAreaStats &&
-        recordDate.getFullYear() === parseInt(selectedYear) &&
-        recordDate.getMonth() === parseInt(selectedMonth) &&
+        recordYear === parseInt(selectedYear) &&
+        recordMonth === parseInt(selectedMonth) &&
         matchesJornada 
       );
     });
@@ -199,10 +244,15 @@ export default function App() {
   const getChartData = () => {
     const areaRecords = getFilteredRecords();
     const grouped = {};
+    // Ordenar cronológicamente para la gráfica (antiguo a nuevo)
     const sortedRecords = [...areaRecords].sort((a,b) => new Date(a.fecha) - new Date(b.fecha));
 
     sortedRecords.forEach(r => {
-      const day = r.fecha.split('-')[2];
+      if(!r.fecha) return;
+      const dateStr = r.fecha.toString().split('T')[0];
+      const day = dateStr.split('-')[2];
+      
+      // Llave de agrupación
       const key = selectedJornadaStats === 'Todas' ? `${day}-${r.jornada}` : `${day}`;
       
       if (!grouped[key]) {
@@ -215,27 +265,16 @@ export default function App() {
         };
       }
       
-      const type = r.type ? r.type.toLowerCase() : 'temperatura';
-      
-      if (type === 'temperatura') {
-        // ✅ CORRECCIÓN: Buscamos varios nombres posibles para que no falle
-        const actual = r.tempActual || r.temperatura || r.temp;
-        const min = r.tempMin || r.min;
-        const max = r.tempMax || r.max;
-
-        if (actual) grouped[key].tempActual = parseNum(actual);
-        if (min) grouped[key].tempMin = parseNum(min);
-        if (max) grouped[key].tempMax = parseNum(max);
+      if (r.type && r.type.includes('temp')) {
+        if (r.tempActual !== null) grouped[key].tempActual = r.tempActual;
+        if (r.tempMin !== null) grouped[key].tempMin = r.tempMin;
+        if (r.tempMax !== null) grouped[key].tempMax = r.tempMax;
       }
       
-      if (type === 'humedad') {
-        const val = r.humActual || r.humedad; 
-        const min = r.humMin;
-        const max = r.humMax;
-
-        if (val) grouped[key].humActual = parseNum(val);
-        if (min) grouped[key].humMin = parseNum(min);
-        if (max) grouped[key].humMax = parseNum(max);
+      if (r.type && r.type.includes('hum')) {
+        if (r.humActual !== null) grouped[key].humActual = r.humActual;
+        if (r.humMin !== null) grouped[key].humMin = r.humMin;
+        if (r.humMax !== null) grouped[key].humMax = r.humMax;
       }
     });
     return Object.values(grouped);
@@ -394,7 +433,7 @@ export default function App() {
                   <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200 print:shadow-none print:border-slate-300">
                     <div className="flex justify-between items-center mb-4"><h3 className="text-lg font-bold text-slate-700 flex items-center gap-2 print:text-black"><Thermometer className="text-blue-500 print:text-black" /> Temperatura (°C)</h3></div>
                     <div className="h-64 w-full">
-                      {chartData.some(d => d.tempActual) ? (
+                      {chartData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                             <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
