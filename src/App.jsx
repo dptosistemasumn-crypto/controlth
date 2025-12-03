@@ -57,7 +57,7 @@ export default function App() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedJornadaStats, setSelectedJornadaStats] = useState('Todas');
-  const [selectedTypeStats, setSelectedTypeStats] = useState('Temperatura'); // ✅ Nuevo Filtro de Tipo
+  const [selectedTypeStats, setSelectedTypeStats] = useState('Temperatura'); 
 
   const [formData, setFormData] = useState({
     fecha: new Date().toISOString().split('T')[0],
@@ -151,10 +151,17 @@ export default function App() {
     };
   }, []);
 
-  // --- LÓGICA DE FORMULARIO ---
+  // --- LÓGICA DE FORMULARIO (CON MAYÚSCULAS FORZADAS) ---
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // ✅ AQUÍ ESTÁ EL CAMBIO: Si es nombre u observación, forzamos mayúsculas
+    let finalValue = value;
+    if (name === 'registradoPor' || name === 'observaciones') {
+      finalValue = value.toUpperCase();
+    }
+
+    setFormData(prev => ({ ...prev, [name]: finalValue }));
   };
 
   const isOutOfRange = (val) => {
@@ -302,6 +309,17 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800">
+      {/* ESTILOS DE IMPRESIÓN (Landscape y ocultar elementos) */}
+      <style>{`
+        @media print {
+          @page { size: landscape; margin: 10mm; }
+          body { -webkit-print-color-adjust: exact; }
+          .print\\:hidden { display: none !important; }
+          .print\\:block { display: block !important; }
+          .recharts-responsive-container { height: 500px !important; }
+        }
+      `}</style>
+
       {/* HEADER WEB */}
       <header className="bg-white shadow-md sticky top-0 z-50 print:hidden border-b border-slate-100">
         <div className="container mx-auto px-4 py-2 flex flex-col md:flex-row justify-between items-center">
