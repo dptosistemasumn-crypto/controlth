@@ -42,18 +42,19 @@ const APP_TITLE = "Control de Temperatura y Humedad";
 const PRIMARY_COLOR = "#158F97"; 
 const COMPANY_LOGO_URL = "https://i.postimg.cc/L8QN7rqJ/LOGO-CJ-removebg-preview.png";
 
-// ✅ ACTUALIZADO: Se eliminó "TOMA MUESTRA" de la lista principal
 const AREAS = ["OPTICA", "FARMACIA", "PROCEDIMIENTOS", "ODONTOLOGIA", "LABORATORIO"];
 
+// ✅ ACTUALIZADO: Lista de sub-zonas corregida
 const LAB_ZONES = [
   "LABORATORIO", 
   "BAÑO SEROLOGICO",
-  "CLUB DE LEONES",
   "DEPOSITO INSUMOS",
   "NEVERA TRANSPORTE",
   "NEVERA ULTRALAB",
   "NEVERA WHIRPOOL",
+  "NEVERA CLAN",      // Nuevo
   "CONGELADOR",
+  "CONGELADOR CLAN",  // Nuevo
   "TOMA DE MUESTRA",
   "TOMA DE MUESTRA CLAN"
 ];
@@ -65,7 +66,9 @@ const ZONE_LIMITS = {
   "NEVERA TRANSPORTE":  { temp: [2, 8],   hum: [0, 100] },
   "NEVERA ULTRALAB":    { temp: [2, 8],   hum: [0, 100] },
   "NEVERA WHIRPOOL":    { temp: [2, 8],   hum: [0, 100] },
+  "NEVERA CLAN":        { temp: [2, 8],   hum: [0, 100] }, // Nuevo
   "CONGELADOR":         { temp: [-5, 0],  hum: [0, 100] }, 
+  "CONGELADOR CLAN":    { temp: [-5, 0],  hum: [0, 100] }, // Nuevo
 };
 
 const JORNADAS = ["Mañana", "Tarde"];
@@ -81,6 +84,7 @@ export default function App() {
   
   // Filtros
   const [selectedAreaStats, setSelectedAreaStats] = useState(AREAS[0]);
+  const [selectedSubAreaStats, setSelectedSubAreaStats] = useState(LAB_ZONES[0]); // ✅ Estado para sub-filtro en historial
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
   const [selectedJornadaStats, setSelectedJornadaStats] = useState('Todas');
@@ -280,19 +284,19 @@ export default function App() {
 
       const matchesJornada = selectedJornadaStats === 'Todas' || r.jornada === selectedJornadaStats;
       
+      // ✅ LÓGICA DE FILTRADO MEJORADA
+      // Si se selecciona LABORATORIO, filtramos por el nombre completo "LABORATORIO - Subzona"
+      const targetArea = selectedAreaStats === 'LABORATORIO' 
+        ? `LABORATORIO - ${selectedSubAreaStats}` 
+        : selectedAreaStats;
+
       return (
-        r.area === selectedAreaStats &&
+        r.area === targetArea &&
         recordYear === parseInt(selectedYear) &&
         recordMonth === parseInt(selectedMonth) &&
         matchesJornada 
       );
     });
-  };
-
-  const getUniqueAreas = () => {
-    const areasInRecords = records.map(r => r.area);
-    const uniqueSet = new Set([...AREAS, ...areasInRecords]);
-    return Array.from(uniqueSet).sort();
   };
 
   const getChartData = () => {
@@ -334,8 +338,14 @@ export default function App() {
   const chartData = getChartData();
   const currentYear = new Date().getFullYear();
   const years = Array.from({length: 5}, (_, i) => currentYear - i);
-  const availableAreas = getUniqueAreas();
-  const currentChartLimits = getCurrentLimits(selectedAreaStats);
+  
+  // ✅ NOMBRE DE ÁREA PARA MOSTRAR EN EL REPORTE
+  const areaDisplayName = selectedAreaStats === 'LABORATORIO' 
+    ? selectedSubAreaStats 
+    : selectedAreaStats;
+
+  // ✅ LÍMITES DINÁMICOS PARA EL GRÁFICO
+  const currentChartLimits = getCurrentLimits(areaDisplayName);
 
   const calculateAverage = (field) => {
     const validRecords = getFilteredRecords().filter(r => r[field] !== null && r[field] !== undefined);
@@ -413,7 +423,7 @@ export default function App() {
         <div className="grid grid-cols-5 gap-4 mb-8">
           <div className="border-2 border-slate-200 rounded-lg p-4 text-center">
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Área</div>
-            <div className="text-lg font-black text-slate-900 uppercase truncate">{selectedAreaStats}</div>
+            <div className="text-lg font-black text-slate-900 uppercase truncate">{areaDisplayName}</div>
           </div>
           <div className="border-2 border-slate-200 rounded-lg p-4 text-center">
             <div className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Variable</div>
@@ -643,8 +653,19 @@ export default function App() {
                     <option value="Humedad">Humedad</option>
                   </select>
                 </div>
-                {/* ✅ FILTRO DE ÁREA DINÁMICO */}
-                <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área</label><select value={selectedAreaStats} onChange={(e) => setSelectedAreaStats(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">{availableAreas.map(a => <option key={a} value={a}>{a}</option>)}</select></div>
+                {/* ✅ FILTRO DE ÁREA */}
+                <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Área</label><select value={selectedAreaStats} onChange={(e) => setSelectedAreaStats(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">{AREAS.map(a => <option key={a} value={a}>{a}</option>)}</select></div>
+                
+                {/* ✅ FILTRO DE SUB-ÁREA (Solo si es Laboratorio) */}
+                {selectedAreaStats === 'LABORATORIO' && (
+                   <div className="flex-1 animate-fade-in-down">
+                     <label className="block text-xs font-bold text-blue-600 uppercase mb-1">Punto de Control</label>
+                     <select value={selectedSubAreaStats} onChange={(e) => setSelectedSubAreaStats(e.target.value)} className="w-full border-2 border-blue-200 rounded-md px-3 py-2 bg-blue-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none text-blue-900 font-bold">
+                       {LAB_ZONES.map(z => <option key={z} value={z}>{z}</option>)}
+                     </select>
+                   </div>
+                )}
+
                 <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Jornada</label><select value={selectedJornadaStats} onChange={(e) => setSelectedJornadaStats(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none"><option value="Todas">Todas</option>{JORNADAS.map(j => <option key={j} value={j}>{j}</option>)}</select></div>
                 <div className="flex-1"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Mes</label><select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">{MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}</select></div>
                 <div className="w-32"><label className="block text-xs font-bold text-slate-500 uppercase mb-1">Año</label><select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="w-full border border-slate-300 rounded-md px-3 py-2 bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">{years.map(y => <option key={y} value={y}>{y}</option>)}</select></div>
