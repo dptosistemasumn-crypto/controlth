@@ -42,7 +42,8 @@ const APP_TITLE = "Control de Temperatura y Humedad";
 const PRIMARY_COLOR = "#158F97"; 
 const COMPANY_LOGO_URL = "https://i.postimg.cc/L8QN7rqJ/LOGO-CJ-removebg-preview.png";
 
-const AREAS = ["OPTICA", "FARMACIA", "PROCEDIMIENTOS", "TOMA MUESTRA", "ODONTOLOGIA", "LABORATORIO"];
+// ✅ ACTUALIZADO: Se eliminó "TOMA MUESTRA" de la lista principal
+const AREAS = ["OPTICA", "FARMACIA", "PROCEDIMIENTOS", "ODONTOLOGIA", "LABORATORIO"];
 
 const LAB_ZONES = [
   "LABORATORIO", 
